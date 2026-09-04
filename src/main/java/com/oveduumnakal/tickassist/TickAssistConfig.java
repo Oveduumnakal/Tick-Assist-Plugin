@@ -27,17 +27,21 @@ package com.oveduumnakal.tickassist;
 import net.runelite.client.config.Config;
 import net.runelite.client.config.ConfigGroup;
 import net.runelite.client.config.ConfigItem;
+import net.runelite.client.config.Range;
 
 /**
  * RuneLite configuration for Tick Assist.
  *
- * <p>Phase-1 scaffold exposes only the master detection toggle. The full setting surface
- * (countdown style, match confidence, accuracy stats, audio cue, tick-item warnings) is added
- * as each subsystem lands in later phases.
+ * <p>Grows a subsystem at a time. Phase 2 adds the on-screen beat: a metronome style and, until
+ * detection lands, a manual cadence to drive it. The full surface (countdown style, confidence,
+ * accuracy stats, audio cue, tick-item warnings) arrives in later phases.
  */
-@ConfigGroup("tickassist")
+@ConfigGroup(TickAssistConfig.GROUP)
 public interface TickAssistConfig extends Config
 {
+	/** The config group key, shared with {@code ConfigChanged} handling. */
+	String GROUP = "tickassist";
+
 	/**
 	 * Whether the plugin auto-detects tick-manipulation setups from nearby resources and the
 	 * items the player is carrying.
@@ -52,5 +56,37 @@ public interface TickAssistConfig extends Config
 	default boolean autoDetect()
 	{
 		return true;
+	}
+
+	/**
+	 * How the beat is displayed. Phase 2 renders {@link MetronomeStyle#PIPS}; the default becomes
+	 * {@link MetronomeStyle#TARGET_FOLLOW} once that highlight lands.
+	 *
+	 * @return the chosen metronome style
+	 */
+	@ConfigItem(
+		keyName = "metronomeStyle",
+		name = "Beat display",
+		description = "How the tick beat is shown on screen."
+	)
+	default MetronomeStyle metronomeStyle()
+	{
+		return MetronomeStyle.PIPS;
+	}
+
+	/**
+	 * The cadence, in ticks, of the manual beat used until context detection selects a technique.
+	 *
+	 * @return the manual cadence in ticks
+	 */
+	@Range(min = 1, max = 10)
+	@ConfigItem(
+		keyName = "customCadence",
+		name = "Manual cadence",
+		description = "Beat length in ticks for the manual metronome (used until a technique is detected)."
+	)
+	default int customCadence()
+	{
+		return 3;
 	}
 }

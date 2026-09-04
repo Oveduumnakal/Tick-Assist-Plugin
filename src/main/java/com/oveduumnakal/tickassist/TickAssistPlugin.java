@@ -29,9 +29,13 @@ import javax.inject.Inject;
 import com.google.inject.Provides;
 import lombok.extern.slf4j.Slf4j;
 
+import net.runelite.api.events.GameTick;
 import net.runelite.client.config.ConfigManager;
+import net.runelite.client.eventbus.Subscribe;
+import net.runelite.client.events.ConfigChanged;
 import net.runelite.client.plugins.Plugin;
 import net.runelite.client.plugins.PluginDescriptor;
+import net.runelite.client.ui.overlay.OverlayManager;
 
 /**
  * Tick Assist — detects skilling tick-manipulation setups and visualises their timing.
@@ -40,8 +44,9 @@ import net.runelite.client.plugins.PluginDescriptor;
  * tick-manipulation setup is present it shows which item to click and when, with a live countdown
  * and accuracy feedback. It never clicks anything — it only visualises the beat.
  *
- * <p>This is the Phase-1 scaffold: it wires the plugin lifecycle and configuration only. The
- * detection, tick-clock, guidance, and overlay subsystems land in later phases.
+ * <p>Phase 2 wires the tick clock to the game and draws a manual metronome. Context detection, the
+ * ping-pong highlight, and accuracy stats land in later phases; until then the beat runs at the
+ * manual cadence from the config.
  */
 @Slf4j
 @PluginDescriptor(
@@ -57,6 +62,14 @@ public class TickAssistPlugin extends Plugin
 	@Inject
 	private TickAssistConfig config;
 
+	@Inject
+	private OverlayManager overlayManager;
+
+	@Inject
+	private TickMetronomeOverlay metronomeOverlay;
+
+	private TickClock clock;
+
 	/**
 	 * Supplies the plugin's configuration proxy to RuneLite's injector.
 	 *
@@ -70,20 +83,67 @@ public class TickAssistPlugin extends Plugin
 	}
 
 	/**
-	 * Starts the plugin. Phase-1 scaffold performs no work beyond logging.
+	 * Starts the plugin: builds the manual-cadence clock and registers the metronome overlay.
 	 */
 	@Override
 	protected void startUp()
 	{
-		log.debug("Tick Assist started (auto-detect: {})", config.autoDetect());
+		rebuildClock();
+		overlayManager.add(metronomeOverlay);
+		log.debug("Tick Assist started");
 	}
 
 	/**
-	 * Stops the plugin and releases any resources it holds.
+	 * Stops the plugin: removes the overlay and drops the clock.
 	 */
 	@Override
 	protected void shutDown()
 	{
+		overlayManager.remove(metronomeOverlay);
+		clock = null;
 		log.debug("Tick Assist stopped");
+	}
+
+	/**
+	 * Advances the beat by one game tick.
+	 *
+	 * @param event the game-tick event
+	 */
+	@Subscribe
+	public void onGameTick(GameTick event)
+	{
+		if (clock != null)
+			clock.tick();
+	}
+
+	/**
+	 * Rebuilds the clock when the manual cadence changes.
+	 *
+	 * @param event the config-changed event
+	 */
+	@Subscribe
+	public void onConfigChanged(ConfigChanged event)
+	{
+		if (!TickAssistConfig.GROUP.equals(event.getGroup()))
+			return;
+
+		if ("customCadence".equals(event.getKey()))
+			rebuildClock();
+	}
+
+	/**
+	 * Returns the clock currently driving the beat, or {@code null} when the plugin is stopped.
+	 *
+	 * @return the tick clock, or {@code null}
+	 */
+	TickClock clock()
+	{
+		return clock;
+	}
+
+	private void rebuildClock()
+	{
+		TickRecipe metronome = RecipeCatalog.customMetronome(config.customCadence());
+		clock = new TickClock(metronome.steps());
 	}
 }

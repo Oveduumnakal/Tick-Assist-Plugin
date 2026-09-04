@@ -10,11 +10,13 @@
 - [com.oveduumnakal.tickassist.GatherSignal](#comoveduumnakaltickassistgathersignal)
 - [com.oveduumnakal.tickassist.GatherSignal.Kind](#comoveduumnakaltickassistgathersignalkind)
 - [com.oveduumnakal.tickassist.HighlightFocus](#comoveduumnakaltickassisthighlightfocus)
+- [com.oveduumnakal.tickassist.MetronomeStyle](#comoveduumnakaltickassistmetronomestyle)
 - [com.oveduumnakal.tickassist.RecipeCatalog](#comoveduumnakaltickassistrecipecatalog)
 - [com.oveduumnakal.tickassist.StepKind](#comoveduumnakaltickassiststepkind)
 - [com.oveduumnakal.tickassist.TickAssistConfig](#comoveduumnakaltickassisttickassistconfig)
 - [com.oveduumnakal.tickassist.TickAssistPlugin](#comoveduumnakaltickassisttickassistplugin)
 - [com.oveduumnakal.tickassist.TickClock](#comoveduumnakaltickassisttickclock)
+- [com.oveduumnakal.tickassist.TickMetronomeOverlay](#comoveduumnakaltickassisttickmetronomeoverlay)
 - [com.oveduumnakal.tickassist.TickRecipe](#comoveduumnakaltickassisttickrecipe)
 - [com.oveduumnakal.tickassist.TickStep](#comoveduumnakaltickassisttickstep)
 
@@ -319,6 +321,100 @@ Highlight nothing this step.
 
 ---
 
+## com.oveduumnakal.tickassist.MetronomeStyle
+
+_enum_
+
+`public enum MetronomeStyle`
+
+How the beat is shown. `#TARGET_FOLLOW` is the ping-pong inventory/ground highlight
+(lands in a later phase); the others draw an on-screen beat. The `displayName` is the
+config-dropdown label.
+
+### Enum Constant Summary
+
+| Enum Constant | Description |
+|---|---|
+| `BAR` | A single sweeping bar. |
+| `INFOBOX_ONLY` | No on-screen beat; rely on the infobox and stats only. |
+| `PIPS` | A row of pips, one per tick in the cycle, with the current tick lit. |
+| `PULSE` | A pulse that flashes on the action tick. |
+| `TARGET_FOLLOW` | The ping-pong inventory/ground highlight that follows the due action. |
+
+### Field Summary
+
+| Modifier and Type | Field | Description |
+|---|---|---|
+| `private final String` | `displayName` |  |
+
+### Constructor Summary
+
+| Constructor | Description |
+|---|---|
+| `MetronomeStyle(String displayName)` |  |
+
+### Method Summary
+
+| Modifier and Type | Method | Description |
+|---|---|---|
+| `public String` | `toString()` | Returns the config-dropdown label. |
+
+### Enum Constant Detail
+
+#### BAR
+
+`BAR`
+
+A single sweeping bar.
+
+#### INFOBOX_ONLY
+
+`INFOBOX_ONLY`
+
+No on-screen beat; rely on the infobox and stats only.
+
+#### PIPS
+
+`PIPS`
+
+A row of pips, one per tick in the cycle, with the current tick lit.
+
+#### PULSE
+
+`PULSE`
+
+A pulse that flashes on the action tick.
+
+#### TARGET_FOLLOW
+
+`TARGET_FOLLOW`
+
+The ping-pong inventory/ground highlight that follows the due action.
+
+### Field Detail
+
+#### displayName
+
+`private final String displayName`
+
+### Constructor Detail
+
+#### MetronomeStyle
+
+`MetronomeStyle(String displayName)`
+
+### Method Detail
+
+#### toString
+
+`public String toString()`
+
+Returns the config-dropdown label.
+
+- **Returns:** the display label
+
+---
+
 ## com.oveduumnakal.tickassist.RecipeCatalog
 
 _class_
@@ -425,15 +521,31 @@ _interface_
 
 RuneLite configuration for Tick Assist.
 
-<p>Phase-1 scaffold exposes only the master detection toggle. The full setting surface
-(countdown style, match confidence, accuracy stats, audio cue, tick-item warnings) is added
-as each subsystem lands in later phases.
+<p>Grows a subsystem at a time. Phase 2 adds the on-screen beat: a metronome style and, until
+detection lands, a manual cadence to drive it. The full surface (countdown style, confidence,
+accuracy stats, audio cue, tick-item warnings) arrives in later phases.
+
+### Field Summary
+
+| Modifier and Type | Field | Description |
+|---|---|---|
+| `String` | `GROUP` | The config group key, shared with `ConfigChanged` handling. |
 
 ### Method Summary
 
 | Modifier and Type | Method | Description |
 |---|---|---|
 | `default boolean` | `autoDetect()` | Whether the plugin auto-detects tick-manipulation setups from nearby resources and the items the player is carrying. |
+| `default int` | `customCadence()` | The cadence, in ticks, of the manual beat used until context detection selects a technique. |
+| `default MetronomeStyle` | `metronomeStyle()` | How the beat is displayed. |
+
+### Field Detail
+
+#### GROUP
+
+`String GROUP`
+
+The config group key, shared with `ConfigChanged` handling.
 
 ### Method Detail
 
@@ -445,6 +557,23 @@ Whether the plugin auto-detects tick-manipulation setups from nearby resources a
 items the player is carrying.
 
 - **Returns:** true when context detection is enabled
+
+#### customCadence
+
+`default int customCadence()`
+
+The cadence, in ticks, of the manual beat used until context detection selects a technique.
+
+- **Returns:** the manual cadence in ticks
+
+#### metronomeStyle
+
+`default MetronomeStyle metronomeStyle()`
+
+How the beat is displayed. Phase 2 renders `MetronomeStyle#PIPS`; the default becomes
+`MetronomeStyle#TARGET_FOLLOW` once that highlight lands.
+
+- **Returns:** the chosen metronome style
 
 ---
 
@@ -460,30 +589,74 @@ Tick Assist — detects skilling tick-manipulation setups and visualises their t
 tick-manipulation setup is present it shows which item to click and when, with a live countdown
 and accuracy feedback. It never clicks anything — it only visualises the beat.
 
-<p>This is the Phase-1 scaffold: it wires the plugin lifecycle and configuration only. The
-detection, tick-clock, guidance, and overlay subsystems land in later phases.
+<p>Phase 2 wires the tick clock to the game and draws a manual metronome. Context detection, the
+ping-pong highlight, and accuracy stats land in later phases; until then the beat runs at the
+manual cadence from the config.
 
 ### Field Summary
 
 | Modifier and Type | Field | Description |
 |---|---|---|
+| `private TickClock` | `clock` |  |
 | `private TickAssistConfig` | `config` |  |
+| `private TickMetronomeOverlay` | `metronomeOverlay` |  |
+| `private OverlayManager` | `overlayManager` |  |
 
 ### Method Summary
 
 | Modifier and Type | Method | Description |
 |---|---|---|
+| `TickClock` | `clock()` | Returns the clock currently driving the beat, or `null` when the plugin is stopped. |
+| `public void` | `onConfigChanged(ConfigChanged event)` | Rebuilds the clock when the manual cadence changes. |
+| `public void` | `onGameTick(GameTick event)` | Advances the beat by one game tick. |
 | `TickAssistConfig` | `provideConfig(ConfigManager configManager)` | Supplies the plugin's configuration proxy to RuneLite's injector. |
-| `protected void` | `shutDown()` | Stops the plugin and releases any resources it holds. |
-| `protected void` | `startUp()` | Starts the plugin. |
+| `private void` | `rebuildClock()` |  |
+| `protected void` | `shutDown()` | Stops the plugin: removes the overlay and drops the clock. |
+| `protected void` | `startUp()` | Starts the plugin: builds the manual-cadence clock and registers the metronome overlay. |
 
 ### Field Detail
+
+#### clock
+
+`private TickClock clock`
 
 #### config
 
 `private TickAssistConfig config`
 
+#### metronomeOverlay
+
+`private TickMetronomeOverlay metronomeOverlay`
+
+#### overlayManager
+
+`private OverlayManager overlayManager`
+
 ### Method Detail
+
+#### clock
+
+`TickClock clock()`
+
+Returns the clock currently driving the beat, or `null` when the plugin is stopped.
+
+- **Returns:** the tick clock, or `null`
+
+#### onConfigChanged
+
+`public void onConfigChanged(ConfigChanged event)`
+
+Rebuilds the clock when the manual cadence changes.
+
+- **Parameter** `event` — the config-changed event
+
+#### onGameTick
+
+`public void onGameTick(GameTick event)`
+
+Advances the beat by one game tick.
+
+- **Parameter** `event` — the game-tick event
 
 #### provideConfig
 
@@ -494,17 +667,21 @@ Supplies the plugin's configuration proxy to RuneLite's injector.
 - **Parameter** `configManager` — the client configuration manager
 - **Returns:** the Tick Assist configuration
 
+#### rebuildClock
+
+`private void rebuildClock()`
+
 #### shutDown
 
 `protected void shutDown()`
 
-Stops the plugin and releases any resources it holds.
+Stops the plugin: removes the overlay and drops the clock.
 
 #### startUp
 
 `protected void startUp()`
 
-Starts the plugin. Phase-1 scaffold performs no work beyond logging.
+Starts the plugin: builds the manual-cadence clock and registers the metronome overlay.
 
 ---
 
@@ -644,6 +821,113 @@ current step is that kind and is just starting, or -1 when no step of that kind 
 
 - **Parameter** `kind` — the step kind to look ahead for
 - **Returns:** ticks until that kind's next start, 0 if it starts now, or -1 if absent
+
+---
+
+## com.oveduumnakal.tickassist.TickMetronomeOverlay
+
+_class_
+
+`public class TickMetronomeOverlay`
+
+Draws the on-screen beat as a row of pips — one per tick in the cycle — with the current tick
+lit and the action tick (phase 0) coloured. It reads the plugin's `TickClock`, which the
+plugin advances once per game tick, so the row steps in time with the game.
+
+<p>Phase-2 renderer for `MetronomeStyle#PIPS`; the other styles and the target-follow
+highlight arrive in later phases.
+
+### Field Summary
+
+| Modifier and Type | Field | Description |
+|---|---|---|
+| `private static final Color` | `BACKGROUND` |  |
+| `private static final Color` | `BEAT` |  |
+| `private static final int` | `GAP` |  |
+| `private static final Color` | `NOW` |  |
+| `private static final Color` | `OFF_BEAT` |  |
+| `private static final int` | `PAD` |  |
+| `private static final int` | `PIP` |  |
+| `private static final Color` | `TITLE` |  |
+| `private static final int` | `TITLE_H` |  |
+| `private final TickAssistConfig` | `config` |  |
+| `private final TickAssistPlugin` | `plugin` |  |
+
+### Constructor Summary
+
+| Constructor | Description |
+|---|---|
+| `TickMetronomeOverlay(TickAssistPlugin plugin, TickAssistConfig config)` |  |
+
+### Method Summary
+
+| Modifier and Type | Method | Description |
+|---|---|---|
+| `public Dimension` | `render(Graphics2D graphics)` | Renders the pip row for the current clock, or nothing when there is no clock or the pip style is not selected. |
+
+### Field Detail
+
+#### BACKGROUND
+
+`private static final Color BACKGROUND`
+
+#### BEAT
+
+`private static final Color BEAT`
+
+#### GAP
+
+`private static final int GAP`
+
+#### NOW
+
+`private static final Color NOW`
+
+#### OFF_BEAT
+
+`private static final Color OFF_BEAT`
+
+#### PAD
+
+`private static final int PAD`
+
+#### PIP
+
+`private static final int PIP`
+
+#### TITLE
+
+`private static final Color TITLE`
+
+#### TITLE_H
+
+`private static final int TITLE_H`
+
+#### config
+
+`private final TickAssistConfig config`
+
+#### plugin
+
+`private final TickAssistPlugin plugin`
+
+### Constructor Detail
+
+#### TickMetronomeOverlay
+
+`TickMetronomeOverlay(TickAssistPlugin plugin, TickAssistConfig config)`
+
+### Method Detail
+
+#### render
+
+`public Dimension render(Graphics2D graphics)`
+
+Renders the pip row for the current clock, or nothing when there is no clock or the pip
+style is not selected.
+
+- **Parameter** `graphics` — the overlay graphics context
+- **Returns:** the rendered size, or `null` when nothing is drawn
 
 ---
 

@@ -69,7 +69,7 @@ public class ResourceScanner
 			return Collections.emptySet();
 
 		Set<Integer> ids = new HashSet<>();
-		for (NPC npc : client.getNpcs())
+		for (NPC npc : client.getTopLevelWorldView().npcs())
 		{
 			WorldPoint loc = npc.getWorldLocation();
 			if (loc != null && loc.getPlane() == here.getPlane() && loc.distanceTo(here) <= radius)

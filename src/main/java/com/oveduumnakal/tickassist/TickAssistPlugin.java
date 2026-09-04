@@ -42,6 +42,7 @@ import net.runelite.api.events.ItemContainerChanged;
 import net.runelite.api.events.MenuOptionClicked;
 import net.runelite.api.events.StatChanged;
 import net.runelite.api.gameval.InventoryID;
+import net.runelite.client.Notifier;
 import net.runelite.client.config.ConfigManager;
 import net.runelite.client.eventbus.Subscribe;
 import net.runelite.client.events.ConfigChanged;
@@ -104,6 +105,12 @@ public class TickAssistPlugin extends Plugin
 
 	@Inject
 	private InventoryScanner inventoryScanner;
+
+	@Inject
+	private Notifier notifier;
+
+	@Inject
+	private TickBeep tickBeep;
 
 	private NavigationButton navButton;
 	private List<TickRecipe> catalog;
@@ -205,22 +212,39 @@ public class TickAssistPlugin extends Plugin
 		}
 
 		clock.tick();
+		DetectionState detection = currentMatch != null ? currentMatch.state() : DetectionState.OFF;
 		if (clock.phase() == 0)
 		{
-			DetectionState active = currentMatch != null ? currentMatch.state() : DetectionState.OFF;
-			if (active == DetectionState.ACTIVE && !gatheredThisCycle)
+			if (detection == DetectionState.ACTIVE && !gatheredThisCycle)
+			{
 				guidance.onCountdownExpired();
+				notifier.notify(config.notifyOnBreak(), "Tick cadence broke");
+			}
 
 			gatheredThisCycle = false;
 		}
 
-		DetectionState detection = currentMatch != null ? currentMatch.state() : DetectionState.OFF;
+		if (detection == DetectionState.ACTIVE && config.beepOnBeat() && isActionBeat())
+			tickBeep.beep();
+
 		int action = clock.ticksUntilNext(StepKind.TICK_ITEM);
 		if (action < 0)
 			action = clock.ticksUntilNext(StepKind.GATHER);
 
 		guidance.update(detection, clock.currentStep(), action);
 		panel.update(currentMatch, accuracy);
+	}
+
+	private boolean isActionBeat()
+	{
+		if (clock.tickInStep() != 0)
+			return false;
+
+		int actionStep = stepIndexOf(activeRecipe, StepKind.TICK_ITEM);
+		if (actionStep < 0)
+			actionStep = stepIndexOf(activeRecipe, StepKind.GATHER);
+
+		return actionStep >= 0 && clock.stepIndex() == actionStep;
 	}
 
 	/**

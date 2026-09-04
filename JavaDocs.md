@@ -8,6 +8,8 @@
 - [com.oveduumnakal.tickassist.AccuracyTracker](#comoveduumnakaltickassistaccuracytracker)
 - [com.oveduumnakal.tickassist.ActivityDetector](#comoveduumnakaltickassistactivitydetector)
 - [com.oveduumnakal.tickassist.ActivityState](#comoveduumnakaltickassistactivitystate)
+- [com.oveduumnakal.tickassist.Changelog](#comoveduumnakaltickassistchangelog)
+- [com.oveduumnakal.tickassist.Changelog.Release](#comoveduumnakaltickassistchangelogrelease)
 - [com.oveduumnakal.tickassist.Confidence](#comoveduumnakaltickassistconfidence)
 - [com.oveduumnakal.tickassist.CountdownStyle](#comoveduumnakaltickassistcountdownstyle)
 - [com.oveduumnakal.tickassist.DetectionState](#comoveduumnakaltickassistdetectionstate)
@@ -31,6 +33,7 @@
 - [com.oveduumnakal.tickassist.TickAssistIds](#comoveduumnakaltickassisttickassistids)
 - [com.oveduumnakal.tickassist.TickAssistPanel](#comoveduumnakaltickassisttickassistpanel)
 - [com.oveduumnakal.tickassist.TickAssistPlugin](#comoveduumnakaltickassisttickassistplugin)
+- [com.oveduumnakal.tickassist.TickBeep](#comoveduumnakaltickassisttickbeep)
 - [com.oveduumnakal.tickassist.TickClock](#comoveduumnakaltickassisttickclock)
 - [com.oveduumnakal.tickassist.TickItemMonitor](#comoveduumnakaltickassisttickitemmonitor)
 - [com.oveduumnakal.tickassist.TickMetronomeOverlay](#comoveduumnakaltickassisttickmetronomeoverlay)
@@ -367,6 +370,155 @@ Actively gathering (a gather animation is playing).
 `STALLED`
 
 Was gathering but the animation has stopped, within the grace window before `#IDLE`.
+
+---
+
+## com.oveduumnakal.tickassist.Changelog
+
+_class_
+
+`public final class Changelog`
+
+Parses the bundled `changelog.md` resource into an ordered list of releases (newest first).
+Each release starts with a top-level `# <version> - <date>` heading; everything up to the
+next such heading is that release's markdown body. The parser is offline and deterministic;
+`ChangelogGuardTest` enforces that the newest entry matches `runelite-plugin.properties`.
+
+### Nested Type Summary
+
+| Type | Description |
+|---|---|
+| _class_ [`Release`](#comoveduumnakaltickassistchangelogrelease) | One release: its version, written-out date, and the raw markdown body beneath its heading. |
+
+### Field Summary
+
+| Modifier and Type | Field | Description |
+|---|---|---|
+| `private static final Pattern` | `HEADING` | A release heading: `# 0.1 - September 3 2026`. |
+| `static final String` | `RESOURCE` | Resource path of the bundled changelog, relative to the classpath root. |
+| `private final List<Release>` | `releases` |  |
+
+### Constructor Summary
+
+| Constructor | Description |
+|---|---|
+| `Changelog(List<Release> releases)` |  |
+
+### Method Summary
+
+| Modifier and Type | Method | Description |
+|---|---|---|
+| `public String` | `currentVersion()` | Returns the newest release's version, or `null` when the changelog is empty. |
+| `public boolean` | `hasVersion(String version)` | Returns whether a release with exactly the given version exists. |
+| `public static Changelog` | `load()` | Loads and parses the bundled changelog resource. |
+| `public static Changelog` | `parse(String markdown)` | Parses changelog markdown into releases in document order (expected newest first). |
+| `private static String` | `read(InputStream in) throws IOException` |  |
+| `public List<Release>` | `releases()` | Returns the releases, newest first (document order). |
+
+### Field Detail
+
+#### HEADING
+
+`private static final Pattern HEADING`
+
+A release heading: `# 0.1 - September 3 2026`. The `(?!#)` keeps it to a single
+`#` so the body's `##`/`###` headings aren't release boundaries.
+
+#### RESOURCE
+
+`static final String RESOURCE`
+
+Resource path of the bundled changelog, relative to the classpath root.
+
+#### releases
+
+`private final List<Release> releases`
+
+### Constructor Detail
+
+#### Changelog
+
+`private Changelog(List<Release> releases)`
+
+### Method Detail
+
+#### currentVersion
+
+`public String currentVersion()`
+
+Returns the newest release's version, or `null` when the changelog is empty.
+
+- **Returns:** the current version, or `null`
+
+#### hasVersion
+
+`public boolean hasVersion(String version)`
+
+Returns whether a release with exactly the given version exists.
+
+- **Parameter** `version` — the version to look for
+- **Returns:** true when that version has an entry
+
+#### load
+
+`public static Changelog load()`
+
+Loads and parses the bundled changelog resource.
+
+- **Returns:** the parsed changelog
+
+#### parse
+
+`public static Changelog parse(String markdown)`
+
+Parses changelog markdown into releases in document order (expected newest first).
+
+- **Parameter** `markdown` — the changelog markdown
+- **Returns:** the parsed changelog
+
+#### read
+
+`private static String read(InputStream in) throws IOException`
+
+#### releases
+
+`public List<Release> releases()`
+
+Returns the releases, newest first (document order).
+
+- **Returns:** the releases
+
+---
+
+## com.oveduumnakal.tickassist.Changelog.Release
+
+_class_
+
+`public static class Release`
+
+One release: its version, written-out date, and the raw markdown body beneath its heading.
+
+### Field Summary
+
+| Modifier and Type | Field | Description |
+|---|---|---|
+| `String` | `body` |  |
+| `String` | `date` |  |
+| `String` | `version` |  |
+
+### Field Detail
+
+#### body
+
+`String body`
+
+#### date
+
+`String date`
+
+#### version
+
+`String version`
 
 ---
 
@@ -1658,10 +1810,12 @@ accuracy stats, audio cue, tick-item warnings) arrives in later phases.
 | Modifier and Type | Method | Description |
 |---|---|---|
 | `default boolean` | `autoDetect()` | Whether the plugin auto-detects tick-manipulation setups from nearby resources and the items the player is carrying. |
+| `default boolean` | `beepOnBeat()` | Whether to play a short beep on each action tick. |
 | `default CountdownStyle` | `countdownStyle()` | How the countdown to the next action is drawn on the ground target. |
 | `default int` | `customCadence()` | The cadence, in ticks, of the manual beat used until context detection selects a technique. |
 | `default int` | `lowTickItemThreshold()` | The count below which a consumable tick item is considered low. |
 | `default MetronomeStyle` | `metronomeStyle()` | How the beat is displayed. |
+| `default Notification` | `notifyOnBreak()` | Notification fired when the cadence breaks (you fall off the rhythm). |
 | `default RecipePin` | `pinnedRecipe()` | A manual override: force a specific technique, or leave on `RecipePin#AUTO` to detect. |
 | `default int` | `scanRadius()` | How far, in tiles, to look for a manipulable resource when detecting a setup. |
 | `default boolean` | `showAccuracy()` | Whether to show the live accuracy infobox (success %, streak, actions/hour, XP/hour). |
@@ -1685,6 +1839,14 @@ Whether the plugin auto-detects tick-manipulation setups from nearby resources a
 items the player is carrying.
 
 - **Returns:** true when context detection is enabled
+
+#### beepOnBeat
+
+`default boolean beepOnBeat()`
+
+Whether to play a short beep on each action tick.
+
+- **Returns:** true when the beat beep is on
 
 #### countdownStyle
 
@@ -1718,6 +1880,14 @@ How the beat is displayed. `MetronomeStyle#TARGET_FOLLOW` is the ping-pong highl
 the other styles draw an on-screen beat instead.
 
 - **Returns:** the chosen metronome style
+
+#### notifyOnBreak
+
+`default Notification notifyOnBreak()`
+
+Notification fired when the cadence breaks (you fall off the rhythm).
+
+- **Returns:** the break-notification style
 
 #### pinnedRecipe
 
@@ -2026,11 +2196,13 @@ beat. The ping-pong highlight and accuracy stats build on this in later phases.
 | `private int` | `lastSkillXp` |  |
 | `private TickMetronomeOverlay` | `metronomeOverlay` |  |
 | `private NavigationButton` | `navButton` |  |
+| `private Notifier` | `notifier` |  |
 | `private OverlayManager` | `overlayManager` |  |
 | `private TickAssistPanel` | `panel` |  |
 | `private ResourceScanner` | `resourceScanner` |  |
 | `private TickStatsInfoBox` | `statsInfoBox` |  |
 | `private TargetHighlightOverlay` | `targetHighlightOverlay` |  |
+| `private TickBeep` | `tickBeep` |  |
 
 ### Method Summary
 
@@ -2043,6 +2215,7 @@ beat. The ping-pong highlight and accuracy stats build on this in later phases.
 | `private int` | `currentAnimationId()` |  |
 | `RecipeMatch` | `currentMatch()` | Returns the current detection result, or `null` when nothing is detected. |
 | `GuidanceState` | `guidance()` | Returns the current guidance state, or `null` when the plugin is stopped. |
+| `private boolean` | `isActionBeat()` |  |
 | `public void` | `onConfigChanged(ConfigChanged event)` | Rebuilds the fallback metronome when the manual cadence changes. |
 | `public void` | `onGameTick(GameTick event)` | Runs detection for the tick, switches the active recipe when it changes, and advances the beat. |
 | `public void` | `onItemContainerChanged(ItemContainerChanged event)` | Scores a successful gather from an item-count increase (for methods that grant no XP). |
@@ -2140,6 +2313,10 @@ beat. The ping-pong highlight and accuracy stats build on this in later phases.
 
 `private NavigationButton navButton`
 
+#### notifier
+
+`private Notifier notifier`
+
 #### overlayManager
 
 `private OverlayManager overlayManager`
@@ -2159,6 +2336,10 @@ beat. The ping-pong highlight and accuracy stats build on this in later phases.
 #### targetHighlightOverlay
 
 `private TargetHighlightOverlay targetHighlightOverlay`
+
+#### tickBeep
+
+`private TickBeep tickBeep`
 
 ### Method Detail
 
@@ -2209,6 +2390,10 @@ Returns the current detection result, or `null` when nothing is detected.
 Returns the current guidance state, or `null` when the plugin is stopped.
 
 - **Returns:** the guidance state, or `null`
+
+#### isActionBeat
+
+`private boolean isActionBeat()`
 
 #### onConfigChanged
 
@@ -2296,6 +2481,31 @@ Starts the plugin: seeds the catalog, builds the fallback clock, and registers t
 #### stepIndexOf
 
 `private int stepIndexOf(TickRecipe recipe, StepKind kind)`
+
+---
+
+## com.oveduumnakal.tickassist.TickBeep
+
+_class_
+
+`public class TickBeep`
+
+Plays a short audio cue on the action tick. Uses the platform system beep so it needs no bundled
+sound asset; it is opt-in via the config.
+
+### Method Summary
+
+| Modifier and Type | Method | Description |
+|---|---|---|
+| `public void` | `beep()` | Sounds the beep. |
+
+### Method Detail
+
+#### beep
+
+`public void beep()`
+
+Sounds the beep.
 
 ---
 

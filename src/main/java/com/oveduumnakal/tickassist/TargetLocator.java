@@ -90,7 +90,7 @@ public final class TargetLocator
 
 		NPC best = null;
 		int bestDistance = Integer.MAX_VALUE;
-		for (NPC npc : client.getNpcs())
+		for (NPC npc : client.getTopLevelWorldView().npcs())
 		{
 			if (!resourceIds.contains(npc.getId()))
 				continue;

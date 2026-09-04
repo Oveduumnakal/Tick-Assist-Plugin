@@ -6,7 +6,7 @@ Tick Assist is a RuneLite plugin that helps you time skilling **tick-manipulatio
 
 It is **visual only**. Tick Assist never clicks, moves, or interacts for you — you perform every action; the plugin just shows the timing. That keeps it within the RuneLite plugin-hub rules.
 
-> **Status: in development (v0.1).** This is the initial scaffold. Detection, the timing overlay, and stats are being built phase by phase — see the build plan.
+> **Status: v0.1.** Detection, the ping-pong highlight, the countdown, the accuracy stats, and the side panel are all in. Some in-game ids (fishing-spot NPCs, rock/vine objects, the raw-karambwan item) still need capturing before every technique detects fully — until then those recipes arm on their held tick items and activate on the gather animation.
 
 ## How it will work
 

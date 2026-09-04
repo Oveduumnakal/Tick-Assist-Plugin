@@ -27,6 +27,7 @@ package com.oveduumnakal.tickassist;
 import net.runelite.client.config.Config;
 import net.runelite.client.config.ConfigGroup;
 import net.runelite.client.config.ConfigItem;
+import net.runelite.client.config.Notification;
 import net.runelite.client.config.Range;
 
 /**
@@ -149,6 +150,36 @@ public interface TickAssistConfig extends Config
 	default boolean showAccuracy()
 	{
 		return true;
+	}
+
+	/**
+	 * Whether to play a short beep on each action tick.
+	 *
+	 * @return true when the beat beep is on
+	 */
+	@ConfigItem(
+		keyName = "beepOnBeat",
+		name = "Beep on the beat",
+		description = "Play a short beep on each action tick."
+	)
+	default boolean beepOnBeat()
+	{
+		return false;
+	}
+
+	/**
+	 * Notification fired when the cadence breaks (you fall off the rhythm).
+	 *
+	 * @return the break-notification style
+	 */
+	@ConfigItem(
+		keyName = "notifyOnBreak",
+		name = "Notify on break",
+		description = "Notify when the tick cadence breaks."
+	)
+	default Notification notifyOnBreak()
+	{
+		return Notification.OFF;
 	}
 
 	/**

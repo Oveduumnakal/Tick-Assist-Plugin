@@ -24,6 +24,9 @@
  */
 package com.oveduumnakal.tickassist;
 
+import java.awt.Color;
+import java.awt.Graphics2D;
+import java.awt.image.BufferedImage;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
@@ -44,6 +47,8 @@ import net.runelite.client.eventbus.Subscribe;
 import net.runelite.client.events.ConfigChanged;
 import net.runelite.client.plugins.Plugin;
 import net.runelite.client.plugins.PluginDescriptor;
+import net.runelite.client.ui.ClientToolbar;
+import net.runelite.client.ui.NavigationButton;
 import net.runelite.client.ui.overlay.OverlayManager;
 
 /**
@@ -89,11 +94,18 @@ public class TickAssistPlugin extends Plugin
 	private TickStatsInfoBox statsInfoBox;
 
 	@Inject
+	private ClientToolbar clientToolbar;
+
+	@Inject
+	private TickAssistPanel panel;
+
+	@Inject
 	private ResourceScanner resourceScanner;
 
 	@Inject
 	private InventoryScanner inventoryScanner;
 
+	private NavigationButton navButton;
 	private List<TickRecipe> catalog;
 	private ActivityDetector activityDetector;
 	private GuidanceState guidance;
@@ -141,6 +153,13 @@ public class TickAssistPlugin extends Plugin
 		overlayManager.add(inventoryHighlightOverlay);
 		overlayManager.add(targetHighlightOverlay);
 		overlayManager.add(statsInfoBox);
+		navButton = NavigationButton.builder()
+				.tooltip("Tick Assist")
+				.icon(buildIcon())
+				.priority(7)
+				.panel(panel)
+				.build();
+		clientToolbar.addNavigation(navButton);
 		log.debug("Tick Assist started");
 	}
 
@@ -154,6 +173,7 @@ public class TickAssistPlugin extends Plugin
 		overlayManager.remove(inventoryHighlightOverlay);
 		overlayManager.remove(targetHighlightOverlay);
 		overlayManager.remove(statsInfoBox);
+		clientToolbar.removeNavigation(navButton);
 		clock = null;
 		activeRecipe = null;
 		currentMatch = null;
@@ -200,6 +220,7 @@ public class TickAssistPlugin extends Plugin
 			action = clock.ticksUntilNext(StepKind.GATHER);
 
 		guidance.update(detection, clock.currentStep(), action);
+		panel.update(currentMatch, accuracy);
 	}
 
 	/**
@@ -333,6 +354,28 @@ public class TickAssistPlugin extends Plugin
 		return accuracy;
 	}
 
+	/**
+	 * Clears the accuracy stats (invoked from the panel's reset button).
+	 */
+	void resetStats()
+	{
+		if (accuracy != null)
+			accuracy.reset();
+	}
+
+	private BufferedImage buildIcon()
+	{
+		BufferedImage icon = new BufferedImage(24, 24, BufferedImage.TYPE_INT_ARGB);
+		Graphics2D graphics = icon.createGraphics();
+		graphics.setColor(new Color(0x43, 0xE0, 0x8A));
+		graphics.fillRoundRect(2, 9, 4, 6, 2, 2);
+		graphics.setColor(new Color(0xB3, 0xA4, 0x80));
+		graphics.fillRoundRect(10, 9, 4, 6, 2, 2);
+		graphics.fillRoundRect(18, 9, 4, 6, 2, 2);
+		graphics.dispose();
+		return icon;
+	}
+
 	private void registerGather()
 	{
 		accuracy.onGather(gameTick);
@@ -357,11 +400,19 @@ public class TickAssistPlugin extends Plugin
 
 	private TickRecipe selectRecipe(int animationId)
 	{
-		if (config.autoDetect())
+		RecipePin pin = config.pinnedRecipe();
+		if (pin == RecipePin.CUSTOM_METRONOME)
+		{
+			currentMatch = null;
+			return fallback;
+		}
+
+		TickRecipe pinned = pinnedRecipe(pin);
+		if (config.autoDetect() || pinned != null)
 		{
 			Set<Integer> nearby = resourceScanner.nearbyResourceIds(config.scanRadius());
 			Set<Integer> held = inventoryScanner.heldItemIds();
-			Optional<RecipeMatch> match = RecipeMatcher.match(nearby, held, animationId, null, catalog);
+			Optional<RecipeMatch> match = RecipeMatcher.match(nearby, held, animationId, pinned, catalog);
 			if (match.isPresent() && match.get().state() != DetectionState.OFF)
 			{
 				currentMatch = match.get();
@@ -371,6 +422,20 @@ public class TickAssistPlugin extends Plugin
 
 		currentMatch = null;
 		return fallback;
+	}
+
+	private TickRecipe pinnedRecipe(RecipePin pin)
+	{
+		if (pin == RecipePin.AUTO)
+			return null;
+
+		for (TickRecipe recipe : catalog)
+		{
+			if (recipe.id().equals(pin.recipeId()))
+				return recipe;
+		}
+
+		return null;
 	}
 
 	private void rebuildFallback()

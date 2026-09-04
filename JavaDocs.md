@@ -21,6 +21,7 @@
 - [com.oveduumnakal.tickassist.RecipeCatalog](#comoveduumnakaltickassistrecipecatalog)
 - [com.oveduumnakal.tickassist.RecipeMatch](#comoveduumnakaltickassistrecipematch)
 - [com.oveduumnakal.tickassist.RecipeMatcher](#comoveduumnakaltickassistrecipematcher)
+- [com.oveduumnakal.tickassist.RecipePin](#comoveduumnakaltickassistrecipepin)
 - [com.oveduumnakal.tickassist.ResourceScanner](#comoveduumnakaltickassistresourcescanner)
 - [com.oveduumnakal.tickassist.ShortFormat](#comoveduumnakaltickassistshortformat)
 - [com.oveduumnakal.tickassist.StepKind](#comoveduumnakaltickassiststepkind)
@@ -28,6 +29,7 @@
 - [com.oveduumnakal.tickassist.TargetLocator](#comoveduumnakaltickassisttargetlocator)
 - [com.oveduumnakal.tickassist.TickAssistConfig](#comoveduumnakaltickassisttickassistconfig)
 - [com.oveduumnakal.tickassist.TickAssistIds](#comoveduumnakaltickassisttickassistids)
+- [com.oveduumnakal.tickassist.TickAssistPanel](#comoveduumnakaltickassisttickassistpanel)
 - [com.oveduumnakal.tickassist.TickAssistPlugin](#comoveduumnakaltickassisttickassistplugin)
 - [com.oveduumnakal.tickassist.TickClock](#comoveduumnakaltickassisttickclock)
 - [com.oveduumnakal.tickassist.TickItemMonitor](#comoveduumnakaltickassisttickitemmonitor)
@@ -1224,6 +1226,128 @@ Matches the best recipe for the given context.
 
 ---
 
+## com.oveduumnakal.tickassist.RecipePin
+
+_enum_
+
+`public enum RecipePin`
+
+The manual override for detection: `#AUTO` lets the plugin choose, a specific value forces
+that recipe, and `#CUSTOM_METRONOME` forces the plain manual beat. The `recipeId`
+links a value to its `TickRecipe` id (null for the non-recipe options).
+
+### Enum Constant Summary
+
+| Enum Constant | Description |
+|---|---|
+| `AUTO` | Let detection choose the recipe. |
+| `CUSTOM_METRONOME` | Force the plain manual metronome. |
+| `FISHING` | Force 3-tick fishing. |
+| `HERBLORE` | Force 3-tick herblore. |
+| `KARAMBWAN` | Force 1-tick karambwan cooking. |
+| `MINING` | Force 3-tick mining. |
+| `SNAKE_WEED` | Force 3-tick snake weed. |
+
+### Field Summary
+
+| Modifier and Type | Field | Description |
+|---|---|---|
+| `private final String` | `displayName` |  |
+| `private final String` | `recipeId` |  |
+
+### Constructor Summary
+
+| Constructor | Description |
+|---|---|
+| `RecipePin(String displayName, String recipeId)` |  |
+
+### Method Summary
+
+| Modifier and Type | Method | Description |
+|---|---|---|
+| `public String` | `recipeId()` | Returns the id of the recipe this pin forces, or `null` for `#AUTO`. |
+| `public String` | `toString()` | Returns the dropdown label. |
+
+### Enum Constant Detail
+
+#### AUTO
+
+`AUTO`
+
+Let detection choose the recipe.
+
+#### CUSTOM_METRONOME
+
+`CUSTOM_METRONOME`
+
+Force the plain manual metronome.
+
+#### FISHING
+
+`FISHING`
+
+Force 3-tick fishing.
+
+#### HERBLORE
+
+`HERBLORE`
+
+Force 3-tick herblore.
+
+#### KARAMBWAN
+
+`KARAMBWAN`
+
+Force 1-tick karambwan cooking.
+
+#### MINING
+
+`MINING`
+
+Force 3-tick mining.
+
+#### SNAKE_WEED
+
+`SNAKE_WEED`
+
+Force 3-tick snake weed.
+
+### Field Detail
+
+#### displayName
+
+`private final String displayName`
+
+#### recipeId
+
+`private final String recipeId`
+
+### Constructor Detail
+
+#### RecipePin
+
+`RecipePin(String displayName, String recipeId)`
+
+### Method Detail
+
+#### recipeId
+
+`public String recipeId()`
+
+Returns the id of the recipe this pin forces, or `null` for `#AUTO`.
+
+- **Returns:** the recipe id, or `null`
+
+#### toString
+
+`public String toString()`
+
+Returns the dropdown label.
+
+- **Returns:** the display label
+
+---
+
 ## com.oveduumnakal.tickassist.ResourceScanner
 
 _class_
@@ -1538,6 +1662,7 @@ accuracy stats, audio cue, tick-item warnings) arrives in later phases.
 | `default int` | `customCadence()` | The cadence, in ticks, of the manual beat used until context detection selects a technique. |
 | `default int` | `lowTickItemThreshold()` | The count below which a consumable tick item is considered low. |
 | `default MetronomeStyle` | `metronomeStyle()` | How the beat is displayed. |
+| `default RecipePin` | `pinnedRecipe()` | A manual override: force a specific technique, or leave on `RecipePin#AUTO` to detect. |
 | `default int` | `scanRadius()` | How far, in tiles, to look for a manipulable resource when detecting a setup. |
 | `default boolean` | `showAccuracy()` | Whether to show the live accuracy infobox (success %, streak, actions/hour, XP/hour). |
 | `default boolean` | `warnLowTickItems()` | Whether to warn when a consumable tick item is running low. |
@@ -1593,6 +1718,14 @@ How the beat is displayed. `MetronomeStyle#TARGET_FOLLOW` is the ping-pong highl
 the other styles draw an on-screen beat instead.
 
 - **Returns:** the chosen metronome style
+
+#### pinnedRecipe
+
+`default RecipePin pinnedRecipe()`
+
+A manual override: force a specific technique, or leave on `RecipePin#AUTO` to detect.
+
+- **Returns:** the pinned recipe selection
 
 #### scanRadius
 
@@ -1739,6 +1872,123 @@ Marshy-vine object ids for snake weed — capture in-game (Step-0).
 
 ---
 
+## com.oveduumnakal.tickassist.TickAssistPanel
+
+_class_
+
+`public class TickAssistPanel`
+
+The Tick Assist side panel: shows the detected technique and its explainer, lets the player pin
+or disable detection, displays the live stats, and resets them.
+
+### Field Summary
+
+| Modifier and Type | Field | Description |
+|---|---|---|
+| `private final JLabel` | `actionsLabel` |  |
+| `private final JLabel` | `blurbLabel` |  |
+| `private final ConfigManager` | `configManager` |  |
+| `private final JLabel` | `detectedLabel` |  |
+| `private final JComboBox<RecipePin>` | `pinBox` |  |
+| `private final TickAssistPlugin` | `plugin` |  |
+| `private final JLabel` | `streakLabel` |  |
+| `private final JLabel` | `successLabel` |  |
+| `private final JLabel` | `xpLabel` |  |
+
+### Constructor Summary
+
+| Constructor | Description |
+|---|---|
+| `TickAssistPanel(ConfigManager configManager, TickAssistPlugin plugin)` |  |
+
+### Method Summary
+
+| Modifier and Type | Method | Description |
+|---|---|---|
+| `private void` | `buildUi()` |  |
+| `private void` | `onPinChanged()` |  |
+| `private void` | `render(RecipeMatch match, AccuracyTracker accuracy)` |  |
+| `private Component` | `spacer()` |  |
+| `private JPanel` | `statsPanel()` |  |
+| `void` | `update(RecipeMatch match, AccuracyTracker accuracy)` | Refreshes the panel from the current detection and stats, on the Swing thread. |
+
+### Field Detail
+
+#### actionsLabel
+
+`private final JLabel actionsLabel`
+
+#### blurbLabel
+
+`private final JLabel blurbLabel`
+
+#### configManager
+
+`private final ConfigManager configManager`
+
+#### detectedLabel
+
+`private final JLabel detectedLabel`
+
+#### pinBox
+
+`private final JComboBox<RecipePin> pinBox`
+
+#### plugin
+
+`private final TickAssistPlugin plugin`
+
+#### streakLabel
+
+`private final JLabel streakLabel`
+
+#### successLabel
+
+`private final JLabel successLabel`
+
+#### xpLabel
+
+`private final JLabel xpLabel`
+
+### Constructor Detail
+
+#### TickAssistPanel
+
+`TickAssistPanel(ConfigManager configManager, TickAssistPlugin plugin)`
+
+### Method Detail
+
+#### buildUi
+
+`private void buildUi()`
+
+#### onPinChanged
+
+`private void onPinChanged()`
+
+#### render
+
+`private void render(RecipeMatch match, AccuracyTracker accuracy)`
+
+#### spacer
+
+`private Component spacer()`
+
+#### statsPanel
+
+`private JPanel statsPanel()`
+
+#### update
+
+`void update(RecipeMatch match, AccuracyTracker accuracy)`
+
+Refreshes the panel from the current detection and stats, on the Swing thread.
+
+- **Parameter** `match` — the current detection result, or `null`
+- **Parameter** `accuracy` — the current accuracy tracker, or `null`
+
+---
+
 ## com.oveduumnakal.tickassist.TickAssistPlugin
 
 _class_
@@ -1762,6 +2012,7 @@ beat. The ping-pong highlight and accuracy stats build on this in later phases.
 | `private ActivityDetector` | `activityDetector` |  |
 | `private List<TickRecipe>` | `catalog` |  |
 | `private Client` | `client` |  |
+| `private ClientToolbar` | `clientToolbar` |  |
 | `private TickClock` | `clock` |  |
 | `private TickAssistConfig` | `config` |  |
 | `private RecipeMatch` | `currentMatch` |  |
@@ -1774,7 +2025,9 @@ beat. The ping-pong highlight and accuracy stats build on this in later phases.
 | `private int` | `lastItemCount` |  |
 | `private int` | `lastSkillXp` |  |
 | `private TickMetronomeOverlay` | `metronomeOverlay` |  |
+| `private NavigationButton` | `navButton` |  |
 | `private OverlayManager` | `overlayManager` |  |
+| `private TickAssistPanel` | `panel` |  |
 | `private ResourceScanner` | `resourceScanner` |  |
 | `private TickStatsInfoBox` | `statsInfoBox` |  |
 | `private TargetHighlightOverlay` | `targetHighlightOverlay` |  |
@@ -1785,6 +2038,7 @@ beat. The ping-pong highlight and accuracy stats build on this in later phases.
 |---|---|---|
 | `AccuracyTracker` | `accuracy()` | Returns the accuracy tracker for the active recipe, or `null` when the plugin is stopped. |
 | `TickRecipe` | `activeRecipe()` | Returns the recipe currently driving the beat, or `null` when the plugin is stopped. |
+| `private BufferedImage` | `buildIcon()` |  |
 | `TickClock` | `clock()` | Returns the clock currently driving the beat, or `null` when the plugin is stopped. |
 | `private int` | `currentAnimationId()` |  |
 | `RecipeMatch` | `currentMatch()` | Returns the current detection result, or `null` when nothing is detected. |
@@ -1794,9 +2048,11 @@ beat. The ping-pong highlight and accuracy stats build on this in later phases.
 | `public void` | `onItemContainerChanged(ItemContainerChanged event)` | Scores a successful gather from an item-count increase (for methods that grant no XP). |
 | `public void` | `onMenuOptionClicked(MenuOptionClicked event)` | Re-anchors the beat to the tick-item step when the player actually clicks the tick item. |
 | `public void` | `onStatChanged(StatChanged event)` | Scores a successful gather from an XP gain in the recipe's skill. |
+| `private TickRecipe` | `pinnedRecipe(RecipePin pin)` |  |
 | `TickAssistConfig` | `provideConfig(ConfigManager configManager)` | Supplies the plugin's configuration proxy to RuneLite's injector. |
 | `private void` | `rebuildFallback()` |  |
 | `private void` | `registerGather()` |  |
+| `void` | `resetStats()` | Clears the accuracy stats (invoked from the panel's reset button). |
 | `private TickRecipe` | `selectRecipe(int animationId)` |  |
 | `protected void` | `shutDown()` | Stops the plugin: removes the overlay and drops all live state. |
 | `protected void` | `startUp()` | Starts the plugin: seeds the catalog, builds the fallback clock, and registers the overlay. |
@@ -1827,6 +2083,10 @@ beat. The ping-pong highlight and accuracy stats build on this in later phases.
 #### client
 
 `private Client client`
+
+#### clientToolbar
+
+`private ClientToolbar clientToolbar`
 
 #### clock
 
@@ -1876,9 +2136,17 @@ beat. The ping-pong highlight and accuracy stats build on this in later phases.
 
 `private TickMetronomeOverlay metronomeOverlay`
 
+#### navButton
+
+`private NavigationButton navButton`
+
 #### overlayManager
 
 `private OverlayManager overlayManager`
+
+#### panel
+
+`private TickAssistPanel panel`
 
 #### resourceScanner
 
@@ -1909,6 +2177,10 @@ Returns the accuracy tracker for the active recipe, or `null` when the plugin is
 Returns the recipe currently driving the beat, or `null` when the plugin is stopped.
 
 - **Returns:** the active recipe, or `null`
+
+#### buildIcon
+
+`private BufferedImage buildIcon()`
 
 #### clock
 
@@ -1978,6 +2250,10 @@ Scores a successful gather from an XP gain in the recipe's skill.
 
 - **Parameter** `event` — the stat-changed event
 
+#### pinnedRecipe
+
+`private TickRecipe pinnedRecipe(RecipePin pin)`
+
 #### provideConfig
 
 `TickAssistConfig provideConfig(ConfigManager configManager)`
@@ -1994,6 +2270,12 @@ Supplies the plugin's configuration proxy to RuneLite's injector.
 #### registerGather
 
 `private void registerGather()`
+
+#### resetStats
+
+`void resetStats()`
+
+Clears the accuracy stats (invoked from the panel's reset button).
 
 #### selectRecipe
 

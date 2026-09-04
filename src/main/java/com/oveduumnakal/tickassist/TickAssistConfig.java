@@ -59,6 +59,21 @@ public interface TickAssistConfig extends Config
 	}
 
 	/**
+	 * A manual override: force a specific technique, or leave on {@link RecipePin#AUTO} to detect.
+	 *
+	 * @return the pinned recipe selection
+	 */
+	@ConfigItem(
+		keyName = "pinnedRecipe",
+		name = "Technique",
+		description = "Force a technique, or leave on Auto-detect to choose from context."
+	)
+	default RecipePin pinnedRecipe()
+	{
+		return RecipePin.AUTO;
+	}
+
+	/**
 	 * How far, in tiles, to look for a manipulable resource when detecting a setup.
 	 *
 	 * @return the scan radius in tiles

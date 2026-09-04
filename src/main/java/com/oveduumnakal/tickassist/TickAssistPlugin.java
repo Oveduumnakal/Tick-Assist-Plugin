@@ -24,11 +24,16 @@
  */
 package com.oveduumnakal.tickassist;
 
+import java.util.List;
+import java.util.Optional;
+import java.util.Set;
 import javax.inject.Inject;
 
 import com.google.inject.Provides;
 import lombok.extern.slf4j.Slf4j;
 
+import net.runelite.api.Client;
+import net.runelite.api.Player;
 import net.runelite.api.events.GameTick;
 import net.runelite.client.config.ConfigManager;
 import net.runelite.client.eventbus.Subscribe;
@@ -40,13 +45,10 @@ import net.runelite.client.ui.overlay.OverlayManager;
 /**
  * Tick Assist — detects skilling tick-manipulation setups and visualises their timing.
  *
- * <p>The plugin watches the resources around the player and the items they carry; when a known
- * tick-manipulation setup is present it shows which item to click and when, with a live countdown
- * and accuracy feedback. It never clicks anything — it only visualises the beat.
- *
- * <p>Phase 2 wires the tick clock to the game and draws a manual metronome. Context detection, the
- * ping-pong highlight, and accuracy stats land in later phases; until then the beat runs at the
- * manual cadence from the config.
+ * <p>Each tick the plugin reads the player's animation, the resources in range, and the items they
+ * carry, matches a recipe from the catalog, and drives the tick clock from it — falling back to a
+ * plain manual metronome when nothing is detected. It never clicks anything; it only visualises the
+ * beat. The ping-pong highlight and accuracy stats build on this in later phases.
  */
 @Slf4j
 @PluginDescriptor(
@@ -59,6 +61,11 @@ import net.runelite.client.ui.overlay.OverlayManager;
 )
 public class TickAssistPlugin extends Plugin
 {
+	private static final int STALL_TICKS = 5;
+
+	@Inject
+	private Client client;
+
 	@Inject
 	private TickAssistConfig config;
 
@@ -68,7 +75,18 @@ public class TickAssistPlugin extends Plugin
 	@Inject
 	private TickMetronomeOverlay metronomeOverlay;
 
+	@Inject
+	private ResourceScanner resourceScanner;
+
+	@Inject
+	private InventoryScanner inventoryScanner;
+
+	private List<TickRecipe> catalog;
+	private ActivityDetector activityDetector;
+	private TickRecipe fallback;
+	private TickRecipe activeRecipe;
 	private TickClock clock;
+	private RecipeMatch currentMatch;
 
 	/**
 	 * Supplies the plugin's configuration proxy to RuneLite's injector.
@@ -83,41 +101,58 @@ public class TickAssistPlugin extends Plugin
 	}
 
 	/**
-	 * Starts the plugin: builds the manual-cadence clock and registers the metronome overlay.
+	 * Starts the plugin: seeds the catalog, builds the fallback clock, and registers the overlay.
 	 */
 	@Override
 	protected void startUp()
 	{
-		rebuildClock();
+		catalog = RecipeCatalog.seedRecipes();
+		activityDetector = new ActivityDetector(STALL_TICKS);
+		fallback = RecipeCatalog.customMetronome(config.customCadence());
+		activeRecipe = fallback;
+		clock = new TickClock(fallback.steps());
+		currentMatch = null;
 		overlayManager.add(metronomeOverlay);
 		log.debug("Tick Assist started");
 	}
 
 	/**
-	 * Stops the plugin: removes the overlay and drops the clock.
+	 * Stops the plugin: removes the overlay and drops all live state.
 	 */
 	@Override
 	protected void shutDown()
 	{
 		overlayManager.remove(metronomeOverlay);
 		clock = null;
+		activeRecipe = null;
+		currentMatch = null;
 		log.debug("Tick Assist stopped");
 	}
 
 	/**
-	 * Advances the beat by one game tick.
+	 * Runs detection for the tick, switches the active recipe when it changes, and advances the beat.
 	 *
 	 * @param event the game-tick event
 	 */
 	@Subscribe
 	public void onGameTick(GameTick event)
 	{
+		int animationId = currentAnimationId();
+		activityDetector.update(animationId, activeRecipe.gatherAnimationIds());
+
+		TickRecipe selected = selectRecipe(animationId);
+		if (!selected.id().equals(activeRecipe.id()))
+		{
+			activeRecipe = selected;
+			clock = new TickClock(selected.steps());
+		}
+
 		if (clock != null)
 			clock.tick();
 	}
 
 	/**
-	 * Rebuilds the clock when the manual cadence changes.
+	 * Rebuilds the fallback metronome when the manual cadence changes.
 	 *
 	 * @param event the config-changed event
 	 */
@@ -128,7 +163,7 @@ public class TickAssistPlugin extends Plugin
 			return;
 
 		if ("customCadence".equals(event.getKey()))
-			rebuildClock();
+			rebuildFallback();
 	}
 
 	/**
@@ -141,9 +176,47 @@ public class TickAssistPlugin extends Plugin
 		return clock;
 	}
 
-	private void rebuildClock()
+	/**
+	 * Returns the current detection result, or {@code null} when nothing is detected.
+	 *
+	 * @return the current match, or {@code null}
+	 */
+	RecipeMatch currentMatch()
 	{
-		TickRecipe metronome = RecipeCatalog.customMetronome(config.customCadence());
-		clock = new TickClock(metronome.steps());
+		return currentMatch;
+	}
+
+	private TickRecipe selectRecipe(int animationId)
+	{
+		if (config.autoDetect())
+		{
+			Set<Integer> nearby = resourceScanner.nearbyResourceIds(config.scanRadius());
+			Set<Integer> held = inventoryScanner.heldItemIds();
+			Optional<RecipeMatch> match = RecipeMatcher.match(nearby, held, animationId, null, catalog);
+			if (match.isPresent() && match.get().state() != DetectionState.OFF)
+			{
+				currentMatch = match.get();
+				return currentMatch.recipe();
+			}
+		}
+
+		currentMatch = null;
+		return fallback;
+	}
+
+	private void rebuildFallback()
+	{
+		fallback = RecipeCatalog.customMetronome(config.customCadence());
+		if (currentMatch == null)
+		{
+			activeRecipe = fallback;
+			clock = new TickClock(fallback.steps());
+		}
+	}
+
+	private int currentAnimationId()
+	{
+		Player local = client.getLocalPlayer();
+		return local == null ? -1 : local.getAnimation();
 	}
 }

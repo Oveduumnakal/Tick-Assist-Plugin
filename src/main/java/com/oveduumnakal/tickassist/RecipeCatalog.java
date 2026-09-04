@@ -60,6 +60,7 @@ public final class RecipeCatalog
 						new TickStep(StepKind.TICK_ITEM, 1, "Tick item", HighlightFocus.INVENTORY),
 						new TickStep(StepKind.WAIT, 1, "Wait", HighlightFocus.NONE)),
 				Confidence.HIGH, GatherSignal.xp(Skill.FISHING),
+				TickAssistIds.FISHING_SPOTS, TickAssistIds.FISHING_TICK_ITEMS, TickAssistIds.FISHING_ANIMS,
 				"Fish, then a 1-tick inventory action each cycle so the catch rolls every 3 ticks instead of 5."));
 
 		recipes.add(new TickRecipe("three_tick_mining", "3-tick mining",
@@ -68,12 +69,14 @@ public final class RecipeCatalog
 						new TickStep(StepKind.TICK_ITEM, 1, "Tick item", HighlightFocus.INVENTORY),
 						new TickStep(StepKind.WAIT, 1, "Wait", HighlightFocus.NONE)),
 				Confidence.HIGH, GatherSignal.xp(Skill.MINING),
+				TickAssistIds.MINING_ROCKS, TickAssistIds.MINING_TICK_ITEMS, TickAssistIds.MINING_ANIMS,
 				"Mine, interleave a 1-tick item so the ore rolls every 3 ticks."));
 
 		recipes.add(new TickRecipe("one_tick_karambwan", "1-tick karambwan cooking",
 				Arrays.asList(
 						new TickStep(StepKind.GATHER, 1, "Cook", HighlightFocus.INVENTORY)),
 				Confidence.HIGH, GatherSignal.xp(Skill.COOKING),
+				Collections.emptySet(), TickAssistIds.KARAMBWAN_TICK_ITEMS, TickAssistIds.COOKING_ANIMS,
 				"Cook a raw karambwan every tick, synced to the XP drop — a rapid 1-tick beat."));
 
 		recipes.add(new TickRecipe("three_tick_herblore", "3-tick herblore",
@@ -82,6 +85,7 @@ public final class RecipeCatalog
 						new TickStep(StepKind.TICK_ITEM, 1, "Combine", HighlightFocus.INVENTORY),
 						new TickStep(StepKind.WAIT, 1, "Wait", HighlightFocus.NONE)),
 				Confidence.HIGH, GatherSignal.xp(Skill.HERBLORE),
+				Collections.emptySet(), TickAssistIds.HERBLORE_TICK_ITEMS, Collections.emptySet(),
 				"Combine on a 3-tick beat — inventory only, no ground target."));
 
 		recipes.add(new TickRecipe("three_tick_snake_weed", "3-tick snake weed",
@@ -90,6 +94,7 @@ public final class RecipeCatalog
 						new TickStep(StepKind.TICK_ITEM, 1, "Tick item", HighlightFocus.INVENTORY),
 						new TickStep(StepKind.WAIT, 1, "Wait", HighlightFocus.NONE)),
 				Confidence.HIGH, GatherSignal.itemCount(ItemID.SNAKE_WEED),
+				TickAssistIds.SNAKE_WEED_VINES, TickAssistIds.SNAKE_WEED_TICK_ITEMS, Collections.emptySet(),
 				"Pick from the vines on a 3-tick beat; no XP, so scoring watches your snake-weed count."));
 
 		return Collections.unmodifiableList(recipes);
@@ -113,6 +118,7 @@ public final class RecipeCatalog
 			steps.add(new TickStep(StepKind.WAIT, cadenceTicks - 1, "Wait", HighlightFocus.NONE));
 
 		return new TickRecipe("custom_metronome", "Custom metronome", steps,
-				Confidence.HIGH, null, "A plain " + cadenceTicks + "-tick beat with no resource or item awareness.");
+				Confidence.HIGH, null, Collections.emptySet(), Collections.emptySet(), Collections.emptySet(),
+				"A plain " + cadenceTicks + "-tick beat with no resource or item awareness.");
 	}
 }

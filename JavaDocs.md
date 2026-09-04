@@ -5,20 +5,160 @@
 
 ## Contents
 
+- [com.oveduumnakal.tickassist.ActivityDetector](#comoveduumnakaltickassistactivitydetector)
+- [com.oveduumnakal.tickassist.ActivityState](#comoveduumnakaltickassistactivitystate)
 - [com.oveduumnakal.tickassist.Confidence](#comoveduumnakaltickassistconfidence)
 - [com.oveduumnakal.tickassist.CountdownStyle](#comoveduumnakaltickassistcountdownstyle)
+- [com.oveduumnakal.tickassist.DetectionState](#comoveduumnakaltickassistdetectionstate)
 - [com.oveduumnakal.tickassist.GatherSignal](#comoveduumnakaltickassistgathersignal)
 - [com.oveduumnakal.tickassist.GatherSignal.Kind](#comoveduumnakaltickassistgathersignalkind)
 - [com.oveduumnakal.tickassist.HighlightFocus](#comoveduumnakaltickassisthighlightfocus)
+- [com.oveduumnakal.tickassist.InventoryScanner](#comoveduumnakaltickassistinventoryscanner)
 - [com.oveduumnakal.tickassist.MetronomeStyle](#comoveduumnakaltickassistmetronomestyle)
 - [com.oveduumnakal.tickassist.RecipeCatalog](#comoveduumnakaltickassistrecipecatalog)
+- [com.oveduumnakal.tickassist.RecipeMatch](#comoveduumnakaltickassistrecipematch)
+- [com.oveduumnakal.tickassist.RecipeMatcher](#comoveduumnakaltickassistrecipematcher)
+- [com.oveduumnakal.tickassist.ResourceScanner](#comoveduumnakaltickassistresourcescanner)
 - [com.oveduumnakal.tickassist.StepKind](#comoveduumnakaltickassiststepkind)
 - [com.oveduumnakal.tickassist.TickAssistConfig](#comoveduumnakaltickassisttickassistconfig)
+- [com.oveduumnakal.tickassist.TickAssistIds](#comoveduumnakaltickassisttickassistids)
 - [com.oveduumnakal.tickassist.TickAssistPlugin](#comoveduumnakaltickassisttickassistplugin)
 - [com.oveduumnakal.tickassist.TickClock](#comoveduumnakaltickassisttickclock)
 - [com.oveduumnakal.tickassist.TickMetronomeOverlay](#comoveduumnakaltickassisttickmetronomeoverlay)
 - [com.oveduumnakal.tickassist.TickRecipe](#comoveduumnakaltickassisttickrecipe)
 - [com.oveduumnakal.tickassist.TickStep](#comoveduumnakaltickassisttickstep)
+
+---
+
+## com.oveduumnakal.tickassist.ActivityDetector
+
+_class_
+
+`public final class ActivityDetector`
+
+Pure state machine that classifies the player's activity from their animation each tick.
+
+<p>While a gather animation plays the state is `ActivityState#RUNNING`; when it stops the
+state holds at `ActivityState#STALLED` for a grace window (so the beat freezes rather than
+drifting) before falling to `ActivityState#IDLE`. `#risingEdge()` is true on the tick
+the gather starts, which the plugin uses as a fallback clock anchor.
+
+### Field Summary
+
+| Modifier and Type | Field | Description |
+|---|---|---|
+| `private boolean` | `risingEdge` |  |
+| `private final int` | `stallTicks` |  |
+| `private int` | `stalledTicks` |  |
+| `private ActivityState` | `state` |  |
+
+### Constructor Summary
+
+| Constructor | Description |
+|---|---|
+| `ActivityDetector(int stallTicks)` | Creates a detector. |
+
+### Method Summary
+
+| Modifier and Type | Method | Description |
+|---|---|---|
+| `public boolean` | `risingEdge()` | Whether the most recent `#update` was the tick a gather started. |
+| `public ActivityState` | `state()` | Returns the current activity state. |
+| `public ActivityState` | `update(int animationId, Set<Integer> gatherAnims)` | Advances the detector by one tick with the player's current animation. |
+
+### Field Detail
+
+#### risingEdge
+
+`private boolean risingEdge`
+
+#### stallTicks
+
+`private final int stallTicks`
+
+#### stalledTicks
+
+`private int stalledTicks`
+
+#### state
+
+`private ActivityState state`
+
+### Constructor Detail
+
+#### ActivityDetector
+
+`public ActivityDetector(int stallTicks)`
+
+Creates a detector.
+
+- **Parameter** `stallTicks` — how many ticks to hold `ActivityState#STALLED` before going idle
+
+### Method Detail
+
+#### risingEdge
+
+`public boolean risingEdge()`
+
+Whether the most recent `#update` was the tick a gather started.
+
+- **Returns:** true on the rising edge of a gather
+
+#### state
+
+`public ActivityState state()`
+
+Returns the current activity state.
+
+- **Returns:** the current state
+
+#### update
+
+`public ActivityState update(int animationId, Set<Integer> gatherAnims)`
+
+Advances the detector by one tick with the player's current animation.
+
+- **Parameter** `animationId` — the player's animation id this tick (`-1` for none)
+- **Parameter** `gatherAnims` — the animation ids that count as gathering for the active recipe
+- **Returns:** the resulting activity state
+
+---
+
+## com.oveduumnakal.tickassist.ActivityState
+
+_enum_
+
+`public enum ActivityState`
+
+Whether the player is currently performing a gather, as seen through their animation.
+
+### Enum Constant Summary
+
+| Enum Constant | Description |
+|---|---|
+| `IDLE` | Not gathering. |
+| `RUNNING` | Actively gathering (a gather animation is playing). |
+| `STALLED` | Was gathering but the animation has stopped, within the grace window before `#IDLE`. |
+
+### Enum Constant Detail
+
+#### IDLE
+
+`IDLE`
+
+Not gathering.
+
+#### RUNNING
+
+`RUNNING`
+
+Actively gathering (a gather animation is playing).
+
+#### STALLED
+
+`STALLED`
+
+Was gathering but the animation has stopped, within the grace window before `#IDLE`.
 
 ---
 
@@ -143,6 +283,44 @@ A ring with the remaining tick count inside it.
 Returns the display label shown in the config dropdown.
 
 - **Returns:** the display label
+
+---
+
+## com.oveduumnakal.tickassist.DetectionState
+
+_enum_
+
+`public enum DetectionState`
+
+How far a detected recipe has progressed, gating how much guidance is shown.
+
+### Enum Constant Summary
+
+| Enum Constant | Description |
+|---|---|
+| `ACTIVE` | The player is performing the gather; show the full guidance. |
+| `ARMED` | A setup is present but the player is not skilling yet; show a subtle "ready" hint. |
+| `OFF` | No recipe matches; draw nothing. |
+
+### Enum Constant Detail
+
+#### ACTIVE
+
+`ACTIVE`
+
+The player is performing the gather; show the full guidance.
+
+#### ARMED
+
+`ARMED`
+
+A setup is present but the player is not skilling yet; show a subtle "ready" hint.
+
+#### OFF
+
+`OFF`
+
+No recipe matches; draw nothing.
 
 ---
 
@@ -321,6 +499,57 @@ Highlight nothing this step.
 
 ---
 
+## com.oveduumnakal.tickassist.InventoryScanner
+
+_class_
+
+`public class InventoryScanner`
+
+Reads the set of item ids currently in the player's inventory, used by `RecipeMatcher` to
+spot a tick-manipulation setup.
+
+### Field Summary
+
+| Modifier and Type | Field | Description |
+|---|---|---|
+| `private final Client` | `client` |  |
+
+### Constructor Summary
+
+| Constructor | Description |
+|---|---|
+| `InventoryScanner(Client client)` |  |
+
+### Method Summary
+
+| Modifier and Type | Method | Description |
+|---|---|---|
+| `public Set<Integer>` | `heldItemIds()` | Returns the distinct item ids held in the inventory. |
+
+### Field Detail
+
+#### client
+
+`private final Client client`
+
+### Constructor Detail
+
+#### InventoryScanner
+
+`InventoryScanner(Client client)`
+
+### Method Detail
+
+#### heldItemIds
+
+`public Set<Integer> heldItemIds()`
+
+Returns the distinct item ids held in the inventory.
+
+- **Returns:** the held item ids, or an empty set when the inventory is unavailable
+
+---
+
 ## com.oveduumnakal.tickassist.MetronomeStyle
 
 _enum_
@@ -468,6 +697,203 @@ Builds the seed recipes shipped with the plugin.
 
 ---
 
+## com.oveduumnakal.tickassist.RecipeMatch
+
+_class_
+
+`public final class RecipeMatch`
+
+The outcome of `RecipeMatcher`: which recipe was matched, how far it has progressed, and
+at what confidence.
+
+### Field Summary
+
+| Modifier and Type | Field | Description |
+|---|---|---|
+| `private final Confidence` | `confidence` |  |
+| `private final TickRecipe` | `recipe` |  |
+| `private final DetectionState` | `state` |  |
+
+### Constructor Summary
+
+| Constructor | Description |
+|---|---|
+| `RecipeMatch(TickRecipe recipe, DetectionState state, Confidence confidence)` | Creates a match. |
+
+### Method Summary
+
+| Modifier and Type | Method | Description |
+|---|---|---|
+| `public Confidence` | `confidence()` | Returns the match confidence. |
+| `public TickRecipe` | `recipe()` | Returns the matched recipe. |
+| `public DetectionState` | `state()` | Returns the detection state. |
+
+### Field Detail
+
+#### confidence
+
+`private final Confidence confidence`
+
+#### recipe
+
+`private final TickRecipe recipe`
+
+#### state
+
+`private final DetectionState state`
+
+### Constructor Detail
+
+#### RecipeMatch
+
+`public RecipeMatch(TickRecipe recipe, DetectionState state, Confidence confidence)`
+
+Creates a match.
+
+- **Parameter** `recipe` — the matched recipe
+- **Parameter** `state` — the detection state
+- **Parameter** `confidence` — the match confidence
+
+### Method Detail
+
+#### confidence
+
+`public Confidence confidence()`
+
+Returns the match confidence.
+
+- **Returns:** the confidence
+
+#### recipe
+
+`public TickRecipe recipe()`
+
+Returns the matched recipe.
+
+- **Returns:** the recipe
+
+#### state
+
+`public DetectionState state()`
+
+Returns the detection state.
+
+- **Returns:** the state
+
+---
+
+## com.oveduumnakal.tickassist.RecipeMatcher
+
+_class_
+
+`public final class RecipeMatcher`
+
+Pure matcher that picks the active recipe from context: nearby resources, held items, and the
+player's current animation.
+
+<p>Priority, highest first: the current animation matches a recipe's gather animation
+(`DetectionState#ACTIVE`); a required resource is in range and the tick items are held
+(`DetectionState#ARMED`); the tick items of a `Confidence#HIGH` recipe are held
+(`DetectionState#ARMED`). A `Confidence#GENERIC` recipe (common items such as a bare
+knife) stays off until its animation confirms the player is skilling it. A pinned recipe always
+wins. Ties fall to catalog order.
+
+### Constructor Summary
+
+| Constructor | Description |
+|---|---|
+| `RecipeMatcher()` |  |
+
+### Method Summary
+
+| Modifier and Type | Method | Description |
+|---|---|---|
+| `public static Optional<RecipeMatch>` | `match(Set<Integer> nearbyResourceIds, Set<Integer> heldItemIds, int currentAnimationId, TickRecipe pinned, List<TickRecipe> recipes)` | Matches the best recipe for the given context. |
+| `private static int` | `priority(TickRecipe recipe, Set<Integer> nearby, Set<Integer> held, int anim)` |  |
+
+### Constructor Detail
+
+#### RecipeMatcher
+
+`private RecipeMatcher()`
+
+### Method Detail
+
+#### match
+
+`public static Optional<RecipeMatch> match(Set<Integer> nearbyResourceIds, Set<Integer> heldItemIds, int currentAnimationId, TickRecipe pinned, List<TickRecipe> recipes)`
+
+Matches the best recipe for the given context.
+
+- **Parameter** `nearbyResourceIds` — resource NPC/object ids currently in range
+- **Parameter** `heldItemIds` — item ids the player is carrying
+- **Parameter** `currentAnimationId` — the player's animation id this tick (`-1` for none)
+- **Parameter** `pinned` — a forced recipe, or `null` for auto-detection
+- **Parameter** `recipes` — the catalog to match against
+- **Returns:** the best match, or empty when nothing matches
+
+#### priority
+
+`private static int priority(TickRecipe recipe, Set<Integer> nearby, Set<Integer> held, int anim)`
+
+---
+
+## com.oveduumnakal.tickassist.ResourceScanner
+
+_class_
+
+`public class ResourceScanner`
+
+Reads the ids of manipulable resources near the player, used by `RecipeMatcher` to confirm
+a setup is usable here.
+
+<p>Phase-3 scan covers nearby NPCs (fishing spots). Rock and vine game-object scanning is added
+once those object ids are captured in-game (Step-0); until then the object resource sets are
+empty and object-based recipes arm on their held tick items alone.
+
+### Field Summary
+
+| Modifier and Type | Field | Description |
+|---|---|---|
+| `private final Client` | `client` |  |
+
+### Constructor Summary
+
+| Constructor | Description |
+|---|---|
+| `ResourceScanner(Client client)` |  |
+
+### Method Summary
+
+| Modifier and Type | Method | Description |
+|---|---|---|
+| `public Set<Integer>` | `nearbyResourceIds(int radius)` | Returns the ids of resource NPCs within the given tile radius of the player. |
+
+### Field Detail
+
+#### client
+
+`private final Client client`
+
+### Constructor Detail
+
+#### ResourceScanner
+
+`ResourceScanner(Client client)`
+
+### Method Detail
+
+#### nearbyResourceIds
+
+`public Set<Integer> nearbyResourceIds(int radius)`
+
+Returns the ids of resource NPCs within the given tile radius of the player.
+
+- **Parameter** `radius` — the search radius in tiles
+- **Returns:** the nearby resource ids, or an empty set when the player is not loaded
+
+---
+
 ## com.oveduumnakal.tickassist.StepKind
 
 _enum_
@@ -538,6 +964,7 @@ accuracy stats, audio cue, tick-item warnings) arrives in later phases.
 | `default boolean` | `autoDetect()` | Whether the plugin auto-detects tick-manipulation setups from nearby resources and the items the player is carrying. |
 | `default int` | `customCadence()` | The cadence, in ticks, of the manual beat used until context detection selects a technique. |
 | `default MetronomeStyle` | `metronomeStyle()` | How the beat is displayed. |
+| `default int` | `scanRadius()` | How far, in tiles, to look for a manipulable resource when detecting a setup. |
 
 ### Field Detail
 
@@ -575,6 +1002,126 @@ How the beat is displayed. Phase 2 renders `MetronomeStyle#PIPS`; the default be
 
 - **Returns:** the chosen metronome style
 
+#### scanRadius
+
+`default int scanRadius()`
+
+How far, in tiles, to look for a manipulable resource when detecting a setup.
+
+- **Returns:** the scan radius in tiles
+
+---
+
+## com.oveduumnakal.tickassist.TickAssistIds
+
+_class_
+
+`public final class TickAssistIds`
+
+Game id sets that drive detection, grouped by recipe. Item and animation ids use verified
+`net.runelite.api.gameval` constants.
+
+<p><b>Step-0 (in-game) status:</b> the tick-item and mining/fishing/cooking animation sets are
+resolved. The resource-entity sets (fishing-spot NPC ids, rock and vine object ids) still need
+capturing with the RuneLite dev tools; until then they are empty, and a recipe with an empty
+resource set arms on its held tick items alone rather than also requiring the resource in range.
+
+### Field Summary
+
+| Modifier and Type | Field | Description |
+|---|---|---|
+| `public static final Set<Integer>` | `COOKING_ANIMS` | Cooking animation. |
+| `public static final Set<Integer>` | `FISHING_ANIMS` | Barbarian/large-net fishing animation. |
+| `public static final Set<Integer>` | `FISHING_SPOTS` | Fishing-spot NPC ids — capture in-game (Step-0). |
+| `public static final Set<Integer>` | `FISHING_TICK_ITEMS` | Tick items for 3-tick fishing: swamp tar + guam (with pestle) is the distinctive setup. |
+| `public static final Set<Integer>` | `HERBLORE_TICK_ITEMS` | Tick items for 3-tick herblore (herb tar): swamp tar + guam + pestle, inventory only. |
+| `public static final Set<Integer>` | `KARAMBWAN_TICK_ITEMS` | Raw karambwan for 1-tick cooking. |
+| `public static final Set<Integer>` | `MINING_ANIMS` | Mining animations across pickaxe tiers. |
+| `public static final Set<Integer>` | `MINING_ROCKS` | Rock object ids — capture in-game (Step-0). |
+| `public static final Set<Integer>` | `MINING_TICK_ITEMS` | Tick items for 3-tick mining: swamp tar + guam (with pestle). |
+| `public static final Set<Integer>` | `SNAKE_WEED_TICK_ITEMS` | Tick items alongside snake-weed picking. |
+| `public static final Set<Integer>` | `SNAKE_WEED_VINES` | Marshy-vine object ids for snake weed — capture in-game (Step-0). |
+
+### Constructor Summary
+
+| Constructor | Description |
+|---|---|
+| `TickAssistIds()` |  |
+
+### Field Detail
+
+#### COOKING_ANIMS
+
+`public static final Set<Integer> COOKING_ANIMS`
+
+Cooking animation.
+
+#### FISHING_ANIMS
+
+`public static final Set<Integer> FISHING_ANIMS`
+
+Barbarian/large-net fishing animation.
+
+#### FISHING_SPOTS
+
+`public static final Set<Integer> FISHING_SPOTS`
+
+Fishing-spot NPC ids — capture in-game (Step-0).
+
+#### FISHING_TICK_ITEMS
+
+`public static final Set<Integer> FISHING_TICK_ITEMS`
+
+Tick items for 3-tick fishing: swamp tar + guam (with pestle) is the distinctive setup.
+
+#### HERBLORE_TICK_ITEMS
+
+`public static final Set<Integer> HERBLORE_TICK_ITEMS`
+
+Tick items for 3-tick herblore (herb tar): swamp tar + guam + pestle, inventory only.
+
+#### KARAMBWAN_TICK_ITEMS
+
+`public static final Set<Integer> KARAMBWAN_TICK_ITEMS`
+
+Raw karambwan for 1-tick cooking. Resolve the exact item id in-game (Step-0).
+
+#### MINING_ANIMS
+
+`public static final Set<Integer> MINING_ANIMS`
+
+Mining animations across pickaxe tiers.
+
+#### MINING_ROCKS
+
+`public static final Set<Integer> MINING_ROCKS`
+
+Rock object ids — capture in-game (Step-0).
+
+#### MINING_TICK_ITEMS
+
+`public static final Set<Integer> MINING_TICK_ITEMS`
+
+Tick items for 3-tick mining: swamp tar + guam (with pestle).
+
+#### SNAKE_WEED_TICK_ITEMS
+
+`public static final Set<Integer> SNAKE_WEED_TICK_ITEMS`
+
+Tick items alongside snake-weed picking.
+
+#### SNAKE_WEED_VINES
+
+`public static final Set<Integer> SNAKE_WEED_VINES`
+
+Marshy-vine object ids for snake weed — capture in-game (Step-0).
+
+### Constructor Detail
+
+#### TickAssistIds
+
+`private TickAssistIds()`
+
 ---
 
 ## com.oveduumnakal.tickassist.TickAssistPlugin
@@ -585,36 +1132,65 @@ _class_
 
 Tick Assist — detects skilling tick-manipulation setups and visualises their timing.
 
-<p>The plugin watches the resources around the player and the items they carry; when a known
-tick-manipulation setup is present it shows which item to click and when, with a live countdown
-and accuracy feedback. It never clicks anything — it only visualises the beat.
-
-<p>Phase 2 wires the tick clock to the game and draws a manual metronome. Context detection, the
-ping-pong highlight, and accuracy stats land in later phases; until then the beat runs at the
-manual cadence from the config.
+<p>Each tick the plugin reads the player's animation, the resources in range, and the items they
+carry, matches a recipe from the catalog, and drives the tick clock from it — falling back to a
+plain manual metronome when nothing is detected. It never clicks anything; it only visualises the
+beat. The ping-pong highlight and accuracy stats build on this in later phases.
 
 ### Field Summary
 
 | Modifier and Type | Field | Description |
 |---|---|---|
+| `private static final int` | `STALL_TICKS` |  |
+| `private TickRecipe` | `activeRecipe` |  |
+| `private ActivityDetector` | `activityDetector` |  |
+| `private List<TickRecipe>` | `catalog` |  |
+| `private Client` | `client` |  |
 | `private TickClock` | `clock` |  |
 | `private TickAssistConfig` | `config` |  |
+| `private RecipeMatch` | `currentMatch` |  |
+| `private TickRecipe` | `fallback` |  |
+| `private InventoryScanner` | `inventoryScanner` |  |
 | `private TickMetronomeOverlay` | `metronomeOverlay` |  |
 | `private OverlayManager` | `overlayManager` |  |
+| `private ResourceScanner` | `resourceScanner` |  |
 
 ### Method Summary
 
 | Modifier and Type | Method | Description |
 |---|---|---|
 | `TickClock` | `clock()` | Returns the clock currently driving the beat, or `null` when the plugin is stopped. |
-| `public void` | `onConfigChanged(ConfigChanged event)` | Rebuilds the clock when the manual cadence changes. |
-| `public void` | `onGameTick(GameTick event)` | Advances the beat by one game tick. |
+| `private int` | `currentAnimationId()` |  |
+| `RecipeMatch` | `currentMatch()` | Returns the current detection result, or `null` when nothing is detected. |
+| `public void` | `onConfigChanged(ConfigChanged event)` | Rebuilds the fallback metronome when the manual cadence changes. |
+| `public void` | `onGameTick(GameTick event)` | Runs detection for the tick, switches the active recipe when it changes, and advances the beat. |
 | `TickAssistConfig` | `provideConfig(ConfigManager configManager)` | Supplies the plugin's configuration proxy to RuneLite's injector. |
-| `private void` | `rebuildClock()` |  |
-| `protected void` | `shutDown()` | Stops the plugin: removes the overlay and drops the clock. |
-| `protected void` | `startUp()` | Starts the plugin: builds the manual-cadence clock and registers the metronome overlay. |
+| `private void` | `rebuildFallback()` |  |
+| `private TickRecipe` | `selectRecipe(int animationId)` |  |
+| `protected void` | `shutDown()` | Stops the plugin: removes the overlay and drops all live state. |
+| `protected void` | `startUp()` | Starts the plugin: seeds the catalog, builds the fallback clock, and registers the overlay. |
 
 ### Field Detail
+
+#### STALL_TICKS
+
+`private static final int STALL_TICKS`
+
+#### activeRecipe
+
+`private TickRecipe activeRecipe`
+
+#### activityDetector
+
+`private ActivityDetector activityDetector`
+
+#### catalog
+
+`private List<TickRecipe> catalog`
+
+#### client
+
+`private Client client`
 
 #### clock
 
@@ -624,6 +1200,18 @@ manual cadence from the config.
 
 `private TickAssistConfig config`
 
+#### currentMatch
+
+`private RecipeMatch currentMatch`
+
+#### fallback
+
+`private TickRecipe fallback`
+
+#### inventoryScanner
+
+`private InventoryScanner inventoryScanner`
+
 #### metronomeOverlay
 
 `private TickMetronomeOverlay metronomeOverlay`
@@ -631,6 +1219,10 @@ manual cadence from the config.
 #### overlayManager
 
 `private OverlayManager overlayManager`
+
+#### resourceScanner
+
+`private ResourceScanner resourceScanner`
 
 ### Method Detail
 
@@ -642,11 +1234,23 @@ Returns the clock currently driving the beat, or `null` when the plugin is stopp
 
 - **Returns:** the tick clock, or `null`
 
+#### currentAnimationId
+
+`private int currentAnimationId()`
+
+#### currentMatch
+
+`RecipeMatch currentMatch()`
+
+Returns the current detection result, or `null` when nothing is detected.
+
+- **Returns:** the current match, or `null`
+
 #### onConfigChanged
 
 `public void onConfigChanged(ConfigChanged event)`
 
-Rebuilds the clock when the manual cadence changes.
+Rebuilds the fallback metronome when the manual cadence changes.
 
 - **Parameter** `event` — the config-changed event
 
@@ -654,7 +1258,7 @@ Rebuilds the clock when the manual cadence changes.
 
 `public void onGameTick(GameTick event)`
 
-Advances the beat by one game tick.
+Runs detection for the tick, switches the active recipe when it changes, and advances the beat.
 
 - **Parameter** `event` — the game-tick event
 
@@ -667,21 +1271,25 @@ Supplies the plugin's configuration proxy to RuneLite's injector.
 - **Parameter** `configManager` — the client configuration manager
 - **Returns:** the Tick Assist configuration
 
-#### rebuildClock
+#### rebuildFallback
 
-`private void rebuildClock()`
+`private void rebuildFallback()`
+
+#### selectRecipe
+
+`private TickRecipe selectRecipe(int animationId)`
 
 #### shutDown
 
 `protected void shutDown()`
 
-Stops the plugin: removes the overlay and drops the clock.
+Stops the plugin: removes the overlay and drops all live state.
 
 #### startUp
 
 `protected void startUp()`
 
-Starts the plugin: builds the manual-cadence clock and registers the metronome overlay.
+Starts the plugin: seeds the catalog, builds the fallback clock, and registers the overlay.
 
 ---
 
@@ -950,15 +1558,18 @@ by detection are added in Phase 3.
 | `private final String` | `blurb` |  |
 | `private final Confidence` | `confidence` |  |
 | `private final String` | `displayName` |  |
+| `private final Set<Integer>` | `gatherAnimationIds` |  |
 | `private final String` | `id` |  |
+| `private final Set<Integer>` | `resourceIds` |  |
 | `private final GatherSignal` | `signal` |  |
 | `private final List<TickStep>` | `steps` |  |
+| `private final Set<Integer>` | `tickItemIds` |  |
 
 ### Constructor Summary
 
 | Constructor | Description |
 |---|---|
-| `TickRecipe(String id, String displayName, List<TickStep> steps, Confidence confidence, GatherSignal signal, String blurb)` | Creates a recipe. |
+| `TickRecipe(String id, String displayName, List<TickStep> steps, Confidence confidence, GatherSignal signal, Set<Integer> resourceIds, Set<Integer> tickItemIds, Set<Integer> gatherAnimationIds, String blurb)` | Creates a recipe. |
 
 ### Method Summary
 
@@ -968,9 +1579,13 @@ by detection are added in Phase 3.
 | `public int` | `cadenceTicks()` | Returns the cadence in ticks: the sum of every step's duration (the length of one cycle). |
 | `public Confidence` | `confidence()` | Returns the recipe's confidence tier. |
 | `public String` | `displayName()` | Returns the panel display name. |
+| `public Set<Integer>` | `gatherAnimationIds()` | Returns the animation ids that mean the player is performing the gather. |
 | `public String` | `id()` | Returns the stable identifier. |
+| `public boolean` | `requiresResource()` | Whether the recipe needs a ground resource in range (false for inventory-only recipes). |
+| `public Set<Integer>` | `resourceIds()` | Returns the ground-resource NPC/object ids (empty for an inventory-only recipe). |
 | `public GatherSignal` | `signal()` | Returns the successful-gather signal. |
 | `public List<TickStep>` | `steps()` | Returns the ordered, unmodifiable list of cycle steps. |
+| `public Set<Integer>` | `tickItemIds()` | Returns the item ids whose presence marks this setup. |
 
 ### Field Detail
 
@@ -986,9 +1601,17 @@ by detection are added in Phase 3.
 
 `private final String displayName`
 
+#### gatherAnimationIds
+
+`private final Set<Integer> gatherAnimationIds`
+
 #### id
 
 `private final String id`
+
+#### resourceIds
+
+`private final Set<Integer> resourceIds`
 
 #### signal
 
@@ -998,11 +1621,15 @@ by detection are added in Phase 3.
 
 `private final List<TickStep> steps`
 
+#### tickItemIds
+
+`private final Set<Integer> tickItemIds`
+
 ### Constructor Detail
 
 #### TickRecipe
 
-`public TickRecipe(String id, String displayName, List<TickStep> steps, Confidence confidence, GatherSignal signal, String blurb)`
+`public TickRecipe(String id, String displayName, List<TickStep> steps, Confidence confidence, GatherSignal signal, Set<Integer> resourceIds, Set<Integer> tickItemIds, Set<Integer> gatherAnimationIds, String blurb)`
 
 Creates a recipe.
 
@@ -1011,6 +1638,9 @@ Creates a recipe.
 - **Parameter** `steps` — the ordered cycle steps (at least one)
 - **Parameter** `confidence` — how distinctive the setup is
 - **Parameter** `signal` — the successful-gather signal
+- **Parameter** `resourceIds` — NPC/object ids of the ground resource (empty for inventory-only)
+- **Parameter** `tickItemIds` — item ids whose presence marks this setup
+- **Parameter** `gatherAnimationIds` — animation ids that mean the player is performing the gather
 - **Parameter** `blurb` — a short "how it works" explainer
 
 ### Method Detail
@@ -1047,6 +1677,14 @@ Returns the panel display name.
 
 - **Returns:** the display name
 
+#### gatherAnimationIds
+
+`public Set<Integer> gatherAnimationIds()`
+
+Returns the animation ids that mean the player is performing the gather.
+
+- **Returns:** the gather animation ids
+
 #### id
 
 `public String id()`
@@ -1054,6 +1692,22 @@ Returns the panel display name.
 Returns the stable identifier.
 
 - **Returns:** the recipe id
+
+#### requiresResource
+
+`public boolean requiresResource()`
+
+Whether the recipe needs a ground resource in range (false for inventory-only recipes).
+
+- **Returns:** true when a ground resource is required
+
+#### resourceIds
+
+`public Set<Integer> resourceIds()`
+
+Returns the ground-resource NPC/object ids (empty for an inventory-only recipe).
+
+- **Returns:** the resource ids
 
 #### signal
 
@@ -1070,6 +1724,14 @@ Returns the successful-gather signal.
 Returns the ordered, unmodifiable list of cycle steps.
 
 - **Returns:** the steps
+
+#### tickItemIds
+
+`public Set<Integer> tickItemIds()`
+
+Returns the item ids whose presence marks this setup.
+
+- **Returns:** the tick-item ids
 
 ---
 

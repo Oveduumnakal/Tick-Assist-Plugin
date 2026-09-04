@@ -59,6 +59,22 @@ public interface TickAssistConfig extends Config
 	}
 
 	/**
+	 * How far, in tiles, to look for a manipulable resource when detecting a setup.
+	 *
+	 * @return the scan radius in tiles
+	 */
+	@Range(min = 1, max = 15)
+	@ConfigItem(
+		keyName = "scanRadius",
+		name = "Detection range",
+		description = "How far, in tiles, to look for a manipulable resource."
+	)
+	default int scanRadius()
+	{
+		return 5;
+	}
+
+	/**
 	 * How the beat is displayed. Phase 2 renders {@link MetronomeStyle#PIPS}; the default becomes
 	 * {@link MetronomeStyle#TARGET_FOLLOW} once that highlight lands.
 	 *

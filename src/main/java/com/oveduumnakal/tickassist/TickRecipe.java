@@ -26,6 +26,7 @@ package com.oveduumnakal.tickassist;
 
 import java.util.Collections;
 import java.util.List;
+import java.util.Set;
 
 /**
  * One entry in the detection catalog: a named tick-manipulation method described as an ordered
@@ -41,20 +42,27 @@ public final class TickRecipe
 	private final List<TickStep> steps;
 	private final Confidence confidence;
 	private final GatherSignal signal;
+	private final Set<Integer> resourceIds;
+	private final Set<Integer> tickItemIds;
+	private final Set<Integer> gatherAnimationIds;
 	private final String blurb;
 
 	/**
 	 * Creates a recipe.
 	 *
-	 * @param id          a stable lowercase identifier ("three_tick_fishing")
-	 * @param displayName the label shown in the panel ("3-tick fishing")
-	 * @param steps       the ordered cycle steps (at least one)
-	 * @param confidence  how distinctive the setup is
-	 * @param signal      the successful-gather signal
-	 * @param blurb       a short "how it works" explainer
+	 * @param id                 a stable lowercase identifier ("three_tick_fishing")
+	 * @param displayName        the label shown in the panel ("3-tick fishing")
+	 * @param steps              the ordered cycle steps (at least one)
+	 * @param confidence         how distinctive the setup is
+	 * @param signal             the successful-gather signal
+	 * @param resourceIds        NPC/object ids of the ground resource (empty for inventory-only)
+	 * @param tickItemIds        item ids whose presence marks this setup
+	 * @param gatherAnimationIds animation ids that mean the player is performing the gather
+	 * @param blurb              a short "how it works" explainer
 	 */
 	public TickRecipe(String id, String displayName, List<TickStep> steps, Confidence confidence,
-			GatherSignal signal, String blurb)
+			GatherSignal signal, Set<Integer> resourceIds, Set<Integer> tickItemIds,
+			Set<Integer> gatherAnimationIds, String blurb)
 	{
 		if (steps == null || steps.isEmpty())
 			throw new IllegalArgumentException("a recipe needs at least one step");
@@ -64,6 +72,9 @@ public final class TickRecipe
 		this.steps = Collections.unmodifiableList(steps);
 		this.confidence = confidence;
 		this.signal = signal;
+		this.resourceIds = resourceIds == null ? Collections.emptySet() : resourceIds;
+		this.tickItemIds = tickItemIds == null ? Collections.emptySet() : tickItemIds;
+		this.gatherAnimationIds = gatherAnimationIds == null ? Collections.emptySet() : gatherAnimationIds;
 		this.blurb = blurb;
 	}
 
@@ -115,6 +126,46 @@ public final class TickRecipe
 	public GatherSignal signal()
 	{
 		return signal;
+	}
+
+	/**
+	 * Returns the ground-resource NPC/object ids (empty for an inventory-only recipe).
+	 *
+	 * @return the resource ids
+	 */
+	public Set<Integer> resourceIds()
+	{
+		return resourceIds;
+	}
+
+	/**
+	 * Returns the item ids whose presence marks this setup.
+	 *
+	 * @return the tick-item ids
+	 */
+	public Set<Integer> tickItemIds()
+	{
+		return tickItemIds;
+	}
+
+	/**
+	 * Returns the animation ids that mean the player is performing the gather.
+	 *
+	 * @return the gather animation ids
+	 */
+	public Set<Integer> gatherAnimationIds()
+	{
+		return gatherAnimationIds;
+	}
+
+	/**
+	 * Whether the recipe needs a ground resource in range (false for inventory-only recipes).
+	 *
+	 * @return true when a ground resource is required
+	 */
+	public boolean requiresResource()
+	{
+		return !resourceIds.isEmpty();
 	}
 
 	/**

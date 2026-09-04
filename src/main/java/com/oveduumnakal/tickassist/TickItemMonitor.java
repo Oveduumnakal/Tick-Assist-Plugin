@@ -24,60 +24,44 @@
  */
 package com.oveduumnakal.tickassist;
 
-import java.util.Collections;
-import java.util.HashSet;
-import java.util.Set;
 import javax.inject.Inject;
 
-import net.runelite.api.Client;
-import net.runelite.api.Item;
-import net.runelite.api.ItemContainer;
-import net.runelite.api.gameval.InventoryID;
-
 /**
- * Reads the set of item ids currently in the player's inventory, used by {@link RecipeMatcher} to
- * spot a tick-manipulation setup.
+ * Warns when a consumable tick item is running low, so the player can restock before the cadence
+ * stalls. Reusable items (pestle, knife) are never flagged.
  */
-public class InventoryScanner
+public class TickItemMonitor
 {
-	private final Client client;
+	private final InventoryScanner inventoryScanner;
 
 	@Inject
-	InventoryScanner(Client client)
+	TickItemMonitor(InventoryScanner inventoryScanner)
 	{
-		this.client = client;
+		this.inventoryScanner = inventoryScanner;
 	}
 
 	/**
-	 * Returns the distinct item ids held in the inventory.
+	 * Whether any consumable tick item for the recipe is carried but below the threshold.
 	 *
-	 * @return the held item ids, or an empty set when the inventory is unavailable
+	 * @param recipe    the active recipe
+	 * @param threshold the low-stock threshold
+	 * @return true when a consumable tick item is running low
 	 */
-	public Set<Integer> heldItemIds()
+	public boolean lowOnTickItems(TickRecipe recipe, int threshold)
 	{
-		ItemContainer inventory = client.getItemContainer(InventoryID.INV);
-		if (inventory == null)
-			return Collections.emptySet();
+		if (recipe == null)
+			return false;
 
-		Set<Integer> ids = new HashSet<>();
-		for (Item item : inventory.getItems())
+		for (int itemId : recipe.tickItemIds())
 		{
-			if (item != null && item.getId() > 0)
-				ids.add(item.getId());
+			if (!TickAssistIds.CONSUMABLE_TICK_ITEMS.contains(itemId))
+				continue;
+
+			int count = inventoryScanner.count(itemId);
+			if (count > 0 && count < threshold)
+				return true;
 		}
 
-		return ids;
-	}
-
-	/**
-	 * Returns the total quantity of an item held in the inventory.
-	 *
-	 * @param itemId the item id
-	 * @return the total count, or 0 when the inventory is unavailable
-	 */
-	public int count(int itemId)
-	{
-		ItemContainer inventory = client.getItemContainer(InventoryID.INV);
-		return inventory == null ? 0 : inventory.count(itemId);
+		return false;
 	}
 }

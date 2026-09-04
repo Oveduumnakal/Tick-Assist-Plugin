@@ -35,7 +35,10 @@ import lombok.extern.slf4j.Slf4j;
 import net.runelite.api.Client;
 import net.runelite.api.Player;
 import net.runelite.api.events.GameTick;
+import net.runelite.api.events.ItemContainerChanged;
 import net.runelite.api.events.MenuOptionClicked;
+import net.runelite.api.events.StatChanged;
+import net.runelite.api.gameval.InventoryID;
 import net.runelite.client.config.ConfigManager;
 import net.runelite.client.eventbus.Subscribe;
 import net.runelite.client.events.ConfigChanged;
@@ -83,6 +86,9 @@ public class TickAssistPlugin extends Plugin
 	private TargetHighlightOverlay targetHighlightOverlay;
 
 	@Inject
+	private TickStatsInfoBox statsInfoBox;
+
+	@Inject
 	private ResourceScanner resourceScanner;
 
 	@Inject
@@ -91,10 +97,15 @@ public class TickAssistPlugin extends Plugin
 	private List<TickRecipe> catalog;
 	private ActivityDetector activityDetector;
 	private GuidanceState guidance;
+	private AccuracyTracker accuracy;
 	private TickRecipe fallback;
 	private TickRecipe activeRecipe;
 	private TickClock clock;
 	private RecipeMatch currentMatch;
+	private int gameTick;
+	private int lastSkillXp = -1;
+	private int lastItemCount = -1;
+	private boolean gatheredThisCycle;
 
 	/**
 	 * Supplies the plugin's configuration proxy to RuneLite's injector.
@@ -120,10 +131,16 @@ public class TickAssistPlugin extends Plugin
 		fallback = RecipeCatalog.customMetronome(config.customCadence());
 		activeRecipe = fallback;
 		clock = new TickClock(fallback.steps());
+		accuracy = new AccuracyTracker(fallback.cadenceTicks());
 		currentMatch = null;
+		gameTick = 0;
+		lastSkillXp = -1;
+		lastItemCount = -1;
+		gatheredThisCycle = false;
 		overlayManager.add(metronomeOverlay);
 		overlayManager.add(inventoryHighlightOverlay);
 		overlayManager.add(targetHighlightOverlay);
+		overlayManager.add(statsInfoBox);
 		log.debug("Tick Assist started");
 	}
 
@@ -136,9 +153,11 @@ public class TickAssistPlugin extends Plugin
 		overlayManager.remove(metronomeOverlay);
 		overlayManager.remove(inventoryHighlightOverlay);
 		overlayManager.remove(targetHighlightOverlay);
+		overlayManager.remove(statsInfoBox);
 		clock = null;
 		activeRecipe = null;
 		currentMatch = null;
+		accuracy = null;
 		log.debug("Tick Assist stopped");
 	}
 
@@ -150,6 +169,9 @@ public class TickAssistPlugin extends Plugin
 	@Subscribe
 	public void onGameTick(GameTick event)
 	{
+		gameTick++;
+		accuracy.onTick();
+
 		int animationId = currentAnimationId();
 		activityDetector.update(animationId, activeRecipe.gatherAnimationIds());
 
@@ -158,9 +180,19 @@ public class TickAssistPlugin extends Plugin
 		{
 			activeRecipe = selected;
 			clock = new TickClock(selected.steps());
+			accuracy = new AccuracyTracker(selected.cadenceTicks());
+			gatheredThisCycle = false;
 		}
 
 		clock.tick();
+		if (clock.phase() == 0)
+		{
+			DetectionState active = currentMatch != null ? currentMatch.state() : DetectionState.OFF;
+			if (active == DetectionState.ACTIVE && !gatheredThisCycle)
+				guidance.onCountdownExpired();
+
+			gatheredThisCycle = false;
+		}
 
 		DetectionState detection = currentMatch != null ? currentMatch.state() : DetectionState.OFF;
 		int action = clock.ticksUntilNext(StepKind.TICK_ITEM);
@@ -168,6 +200,53 @@ public class TickAssistPlugin extends Plugin
 			action = clock.ticksUntilNext(StepKind.GATHER);
 
 		guidance.update(detection, clock.currentStep(), action);
+	}
+
+	/**
+	 * Scores a successful gather from an XP gain in the recipe's skill.
+	 *
+	 * @param event the stat-changed event
+	 */
+	@Subscribe
+	public void onStatChanged(StatChanged event)
+	{
+		if (activeRecipe == null || accuracy == null)
+			return;
+
+		GatherSignal signal = activeRecipe.signal();
+		if (signal == null || signal.kind() != GatherSignal.Kind.XP_DELTA || event.getSkill() != signal.skill())
+			return;
+
+		int xp = event.getXp();
+		if (lastSkillXp >= 0 && xp > lastSkillXp)
+		{
+			accuracy.onXp(xp - lastSkillXp);
+			registerGather();
+		}
+
+		lastSkillXp = xp;
+	}
+
+	/**
+	 * Scores a successful gather from an item-count increase (for methods that grant no XP).
+	 *
+	 * @param event the item-container-changed event
+	 */
+	@Subscribe
+	public void onItemContainerChanged(ItemContainerChanged event)
+	{
+		if (activeRecipe == null || accuracy == null || event.getContainerId() != InventoryID.INV)
+			return;
+
+		GatherSignal signal = activeRecipe.signal();
+		if (signal == null || signal.kind() != GatherSignal.Kind.ITEM_COUNT)
+			return;
+
+		int count = event.getItemContainer().count(signal.itemId());
+		if (lastItemCount >= 0 && count > lastItemCount)
+			registerGather();
+
+		lastItemCount = count;
 	}
 
 	/**
@@ -184,7 +263,7 @@ public class TickAssistPlugin extends Plugin
 		if (!activeRecipe.tickItemIds().contains(event.getItemId()))
 			return;
 
-		int index = tickItemStepIndex(activeRecipe);
+		int index = stepIndexOf(activeRecipe, StepKind.TICK_ITEM);
 		if (index >= 0)
 			clock.resyncTo(index, 0);
 	}
@@ -244,12 +323,32 @@ public class TickAssistPlugin extends Plugin
 		return activeRecipe;
 	}
 
-	private int tickItemStepIndex(TickRecipe recipe)
+	/**
+	 * Returns the accuracy tracker for the active recipe, or {@code null} when the plugin is stopped.
+	 *
+	 * @return the accuracy tracker, or {@code null}
+	 */
+	AccuracyTracker accuracy()
+	{
+		return accuracy;
+	}
+
+	private void registerGather()
+	{
+		accuracy.onGather(gameTick);
+		guidance.onGather();
+		gatheredThisCycle = true;
+		int gatherStep = stepIndexOf(activeRecipe, StepKind.GATHER);
+		if (gatherStep >= 0 && clock != null)
+			clock.resyncTo(gatherStep, 0);
+	}
+
+	private int stepIndexOf(TickRecipe recipe, StepKind kind)
 	{
 		List<TickStep> steps = recipe.steps();
 		for (int i = 0; i < steps.size(); i++)
 		{
-			if (steps.get(i).kind() == StepKind.TICK_ITEM)
+			if (steps.get(i).kind() == kind)
 				return i;
 		}
 
@@ -281,6 +380,7 @@ public class TickAssistPlugin extends Plugin
 		{
 			activeRecipe = fallback;
 			clock = new TickClock(fallback.steps());
+			accuracy = new AccuracyTracker(fallback.cadenceTicks());
 		}
 	}
 

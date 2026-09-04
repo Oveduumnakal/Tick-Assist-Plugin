@@ -5,6 +5,7 @@
 
 ## Contents
 
+- [com.oveduumnakal.tickassist.AccuracyTracker](#comoveduumnakaltickassistaccuracytracker)
 - [com.oveduumnakal.tickassist.ActivityDetector](#comoveduumnakaltickassistactivitydetector)
 - [com.oveduumnakal.tickassist.ActivityState](#comoveduumnakaltickassistactivitystate)
 - [com.oveduumnakal.tickassist.Confidence](#comoveduumnakaltickassistconfidence)
@@ -21,6 +22,7 @@
 - [com.oveduumnakal.tickassist.RecipeMatch](#comoveduumnakaltickassistrecipematch)
 - [com.oveduumnakal.tickassist.RecipeMatcher](#comoveduumnakaltickassistrecipematcher)
 - [com.oveduumnakal.tickassist.ResourceScanner](#comoveduumnakaltickassistresourcescanner)
+- [com.oveduumnakal.tickassist.ShortFormat](#comoveduumnakaltickassistshortformat)
 - [com.oveduumnakal.tickassist.StepKind](#comoveduumnakaltickassiststepkind)
 - [com.oveduumnakal.tickassist.TargetHighlightOverlay](#comoveduumnakaltickassisttargethighlightoverlay)
 - [com.oveduumnakal.tickassist.TargetLocator](#comoveduumnakaltickassisttargetlocator)
@@ -28,9 +30,209 @@
 - [com.oveduumnakal.tickassist.TickAssistIds](#comoveduumnakaltickassisttickassistids)
 - [com.oveduumnakal.tickassist.TickAssistPlugin](#comoveduumnakaltickassisttickassistplugin)
 - [com.oveduumnakal.tickassist.TickClock](#comoveduumnakaltickassisttickclock)
+- [com.oveduumnakal.tickassist.TickItemMonitor](#comoveduumnakaltickassisttickitemmonitor)
 - [com.oveduumnakal.tickassist.TickMetronomeOverlay](#comoveduumnakaltickassisttickmetronomeoverlay)
 - [com.oveduumnakal.tickassist.TickRecipe](#comoveduumnakaltickassisttickrecipe)
+- [com.oveduumnakal.tickassist.TickStatsInfoBox](#comoveduumnakaltickassisttickstatsinfobox)
 - [com.oveduumnakal.tickassist.TickStep](#comoveduumnakaltickassisttickstep)
+
+---
+
+## com.oveduumnakal.tickassist.AccuracyTracker
+
+_class_
+
+`public final class AccuracyTracker`
+
+Pure accuracy scorer. It compares the tick gap between successive gathers against the target
+cadence: an exact match feeds an honest success rate and streak, while a within-one-tick match
+feeds a more forgiving streak (so double-roll skills and near misses still reward progress).
+It also accumulates gathers, ticks, and XP to project actions/hour and XP/hour.
+
+### Field Summary
+
+| Modifier and Type | Field | Description |
+|---|---|---|
+| `private static final double` | `TICKS_PER_HOUR` |  |
+| `private int` | `attempts` |  |
+| `private int` | `bestForgivingStreak` |  |
+| `private int` | `bestStreak` |  |
+| `private final int` | `cadence` |  |
+| `private int` | `currentStreak` |  |
+| `private int` | `forgivingStreak` |  |
+| `private int` | `hits` |  |
+| `private int` | `lastGatherTick` |  |
+| `private long` | `totalGathers` |  |
+| `private long` | `totalTicks` |  |
+| `private long` | `totalXp` |  |
+
+### Constructor Summary
+
+| Constructor | Description |
+|---|---|
+| `AccuracyTracker(int cadence)` | Creates a tracker for a target cadence. |
+
+### Method Summary
+
+| Modifier and Type | Method | Description |
+|---|---|---|
+| `public double` | `actionsPerHour()` | Returns the projected gathers per hour from the elapsed ticks. |
+| `public int` | `bestForgivingStreak()` | Returns the best within-one-tick streak so far. |
+| `public int` | `bestStreak()` | Returns the best exact-cadence streak so far. |
+| `public int` | `currentStreak()` | Returns the current exact-cadence streak. |
+| `public int` | `forgivingStreak()` | Returns the current within-one-tick (forgiving) streak. |
+| `public void` | `onGather(int gameTick)` | Records a successful gather at the given game tick. |
+| `public void` | `onTick()` | Records one elapsed game tick, used to project the hourly rates. |
+| `public void` | `onXp(int delta)` | Adds an XP gain, used to project XP/hour. |
+| `public void` | `reset()` | Clears all counters. |
+| `public double` | `successRate()` | Returns the honest success rate (exact-cadence hits over attempts), 0 to 1. |
+| `public double` | `xpPerHour()` | Returns the projected XP per hour from the elapsed ticks. |
+
+### Field Detail
+
+#### TICKS_PER_HOUR
+
+`private static final double TICKS_PER_HOUR`
+
+#### attempts
+
+`private int attempts`
+
+#### bestForgivingStreak
+
+`private int bestForgivingStreak`
+
+#### bestStreak
+
+`private int bestStreak`
+
+#### cadence
+
+`private final int cadence`
+
+#### currentStreak
+
+`private int currentStreak`
+
+#### forgivingStreak
+
+`private int forgivingStreak`
+
+#### hits
+
+`private int hits`
+
+#### lastGatherTick
+
+`private int lastGatherTick`
+
+#### totalGathers
+
+`private long totalGathers`
+
+#### totalTicks
+
+`private long totalTicks`
+
+#### totalXp
+
+`private long totalXp`
+
+### Constructor Detail
+
+#### AccuracyTracker
+
+`public AccuracyTracker(int cadence)`
+
+Creates a tracker for a target cadence.
+
+- **Parameter** `cadence` — the target tick gap between gathers
+
+### Method Detail
+
+#### actionsPerHour
+
+`public double actionsPerHour()`
+
+Returns the projected gathers per hour from the elapsed ticks.
+
+- **Returns:** actions per hour
+
+#### bestForgivingStreak
+
+`public int bestForgivingStreak()`
+
+Returns the best within-one-tick streak so far.
+
+- **Returns:** the best forgiving streak
+
+#### bestStreak
+
+`public int bestStreak()`
+
+Returns the best exact-cadence streak so far.
+
+- **Returns:** the best streak
+
+#### currentStreak
+
+`public int currentStreak()`
+
+Returns the current exact-cadence streak.
+
+- **Returns:** the current streak
+
+#### forgivingStreak
+
+`public int forgivingStreak()`
+
+Returns the current within-one-tick (forgiving) streak.
+
+- **Returns:** the forgiving streak
+
+#### onGather
+
+`public void onGather(int gameTick)`
+
+Records a successful gather at the given game tick.
+
+- **Parameter** `gameTick` — a monotonically increasing tick counter
+
+#### onTick
+
+`public void onTick()`
+
+Records one elapsed game tick, used to project the hourly rates.
+
+#### onXp
+
+`public void onXp(int delta)`
+
+Adds an XP gain, used to project XP/hour.
+
+- **Parameter** `delta` — the XP gained
+
+#### reset
+
+`public void reset()`
+
+Clears all counters.
+
+#### successRate
+
+`public double successRate()`
+
+Returns the honest success rate (exact-cadence hits over attempts), 0 to 1.
+
+- **Returns:** the success rate
+
+#### xpPerHour
+
+`public double xpPerHour()`
+
+Returns the projected XP per hour from the elapsed ticks.
+
+- **Returns:** XP per hour
 
 ---
 
@@ -698,6 +900,7 @@ spot a tick-manipulation setup.
 
 | Modifier and Type | Method | Description |
 |---|---|---|
+| `public int` | `count(int itemId)` | Returns the total quantity of an item held in the inventory. |
 | `public Set<Integer>` | `heldItemIds()` | Returns the distinct item ids held in the inventory. |
 
 ### Field Detail
@@ -713,6 +916,15 @@ spot a tick-manipulation setup.
 `InventoryScanner(Client client)`
 
 ### Method Detail
+
+#### count
+
+`public int count(int itemId)`
+
+Returns the total quantity of an item held in the inventory.
+
+- **Parameter** `itemId` — the item id
+- **Returns:** the total count, or 0 when the inventory is unavailable
 
 #### heldItemIds
 
@@ -1068,6 +1280,51 @@ Returns the ids of resource NPCs within the given tile radius of the player.
 
 ---
 
+## com.oveduumnakal.tickassist.ShortFormat
+
+_class_
+
+`public final class ShortFormat`
+
+Compact number formatting for the stats readout: `950`, `1.2k`, `62k`,
+`1.1m`. A stateless utility that cannot be instantiated.
+
+### Constructor Summary
+
+| Constructor | Description |
+|---|---|
+| `ShortFormat()` |  |
+
+### Method Summary
+
+| Modifier and Type | Method | Description |
+|---|---|---|
+| `public static String` | `compact(double value)` | Formats a rate or count compactly with a lowercase k/m suffix. |
+| `private static String` | `trim(double value)` |  |
+
+### Constructor Detail
+
+#### ShortFormat
+
+`private ShortFormat()`
+
+### Method Detail
+
+#### compact
+
+`public static String compact(double value)`
+
+Formats a rate or count compactly with a lowercase k/m suffix.
+
+- **Parameter** `value` — the value to format
+- **Returns:** the compact string
+
+#### trim
+
+`private static String trim(double value)`
+
+---
+
 ## com.oveduumnakal.tickassist.StepKind
 
 _enum_
@@ -1279,8 +1536,11 @@ accuracy stats, audio cue, tick-item warnings) arrives in later phases.
 | `default boolean` | `autoDetect()` | Whether the plugin auto-detects tick-manipulation setups from nearby resources and the items the player is carrying. |
 | `default CountdownStyle` | `countdownStyle()` | How the countdown to the next action is drawn on the ground target. |
 | `default int` | `customCadence()` | The cadence, in ticks, of the manual beat used until context detection selects a technique. |
+| `default int` | `lowTickItemThreshold()` | The count below which a consumable tick item is considered low. |
 | `default MetronomeStyle` | `metronomeStyle()` | How the beat is displayed. |
 | `default int` | `scanRadius()` | How far, in tiles, to look for a manipulable resource when detecting a setup. |
+| `default boolean` | `showAccuracy()` | Whether to show the live accuracy infobox (success %, streak, actions/hour, XP/hour). |
+| `default boolean` | `warnLowTickItems()` | Whether to warn when a consumable tick item is running low. |
 
 ### Field Detail
 
@@ -1317,6 +1577,14 @@ The cadence, in ticks, of the manual beat used until context detection selects a
 
 - **Returns:** the manual cadence in ticks
 
+#### lowTickItemThreshold
+
+`default int lowTickItemThreshold()`
+
+The count below which a consumable tick item is considered low.
+
+- **Returns:** the low-stock threshold
+
 #### metronomeStyle
 
 `default MetronomeStyle metronomeStyle()`
@@ -1333,6 +1601,22 @@ the other styles draw an on-screen beat instead.
 How far, in tiles, to look for a manipulable resource when detecting a setup.
 
 - **Returns:** the scan radius in tiles
+
+#### showAccuracy
+
+`default boolean showAccuracy()`
+
+Whether to show the live accuracy infobox (success %, streak, actions/hour, XP/hour).
+
+- **Returns:** true when the stats infobox is shown
+
+#### warnLowTickItems
+
+`default boolean warnLowTickItems()`
+
+Whether to warn when a consumable tick item is running low.
+
+- **Returns:** true when the low-stock warning is on
 
 ---
 
@@ -1354,6 +1638,7 @@ resource set arms on its held tick items alone rather than also requiring the re
 
 | Modifier and Type | Field | Description |
 |---|---|---|
+| `public static final Set<Integer>` | `CONSUMABLE_TICK_ITEMS` | Tick items that deplete with use, so a low-stock warning applies (not pestle/knife). |
 | `public static final Set<Integer>` | `COOKING_ANIMS` | Cooking animation. |
 | `public static final Set<Integer>` | `FISHING_ANIMS` | Barbarian/large-net fishing animation. |
 | `public static final Set<Integer>` | `FISHING_SPOTS` | Fishing-spot NPC ids — capture in-game (Step-0). |
@@ -1373,6 +1658,12 @@ resource set arms on its held tick items alone rather than also requiring the re
 | `TickAssistIds()` |  |
 
 ### Field Detail
+
+#### CONSUMABLE_TICK_ITEMS
+
+`public static final Set<Integer> CONSUMABLE_TICK_ITEMS`
+
+Tick items that deplete with use, so a low-stock warning applies (not pestle/knife).
 
 #### COOKING_ANIMS
 
@@ -1466,6 +1757,7 @@ beat. The ping-pong highlight and accuracy stats build on this in later phases.
 | Modifier and Type | Field | Description |
 |---|---|---|
 | `private static final int` | `STALL_TICKS` |  |
+| `private AccuracyTracker` | `accuracy` |  |
 | `private TickRecipe` | `activeRecipe` |  |
 | `private ActivityDetector` | `activityDetector` |  |
 | `private List<TickRecipe>` | `catalog` |  |
@@ -1474,18 +1766,24 @@ beat. The ping-pong highlight and accuracy stats build on this in later phases.
 | `private TickAssistConfig` | `config` |  |
 | `private RecipeMatch` | `currentMatch` |  |
 | `private TickRecipe` | `fallback` |  |
+| `private int` | `gameTick` |  |
+| `private boolean` | `gatheredThisCycle` |  |
 | `private GuidanceState` | `guidance` |  |
 | `private InventoryHighlightOverlay` | `inventoryHighlightOverlay` |  |
 | `private InventoryScanner` | `inventoryScanner` |  |
+| `private int` | `lastItemCount` |  |
+| `private int` | `lastSkillXp` |  |
 | `private TickMetronomeOverlay` | `metronomeOverlay` |  |
 | `private OverlayManager` | `overlayManager` |  |
 | `private ResourceScanner` | `resourceScanner` |  |
+| `private TickStatsInfoBox` | `statsInfoBox` |  |
 | `private TargetHighlightOverlay` | `targetHighlightOverlay` |  |
 
 ### Method Summary
 
 | Modifier and Type | Method | Description |
 |---|---|---|
+| `AccuracyTracker` | `accuracy()` | Returns the accuracy tracker for the active recipe, or `null` when the plugin is stopped. |
 | `TickRecipe` | `activeRecipe()` | Returns the recipe currently driving the beat, or `null` when the plugin is stopped. |
 | `TickClock` | `clock()` | Returns the clock currently driving the beat, or `null` when the plugin is stopped. |
 | `private int` | `currentAnimationId()` |  |
@@ -1493,19 +1791,26 @@ beat. The ping-pong highlight and accuracy stats build on this in later phases.
 | `GuidanceState` | `guidance()` | Returns the current guidance state, or `null` when the plugin is stopped. |
 | `public void` | `onConfigChanged(ConfigChanged event)` | Rebuilds the fallback metronome when the manual cadence changes. |
 | `public void` | `onGameTick(GameTick event)` | Runs detection for the tick, switches the active recipe when it changes, and advances the beat. |
+| `public void` | `onItemContainerChanged(ItemContainerChanged event)` | Scores a successful gather from an item-count increase (for methods that grant no XP). |
 | `public void` | `onMenuOptionClicked(MenuOptionClicked event)` | Re-anchors the beat to the tick-item step when the player actually clicks the tick item. |
+| `public void` | `onStatChanged(StatChanged event)` | Scores a successful gather from an XP gain in the recipe's skill. |
 | `TickAssistConfig` | `provideConfig(ConfigManager configManager)` | Supplies the plugin's configuration proxy to RuneLite's injector. |
 | `private void` | `rebuildFallback()` |  |
+| `private void` | `registerGather()` |  |
 | `private TickRecipe` | `selectRecipe(int animationId)` |  |
 | `protected void` | `shutDown()` | Stops the plugin: removes the overlay and drops all live state. |
 | `protected void` | `startUp()` | Starts the plugin: seeds the catalog, builds the fallback clock, and registers the overlay. |
-| `private int` | `tickItemStepIndex(TickRecipe recipe)` |  |
+| `private int` | `stepIndexOf(TickRecipe recipe, StepKind kind)` |  |
 
 ### Field Detail
 
 #### STALL_TICKS
 
 `private static final int STALL_TICKS`
+
+#### accuracy
+
+`private AccuracyTracker accuracy`
 
 #### activeRecipe
 
@@ -1539,6 +1844,14 @@ beat. The ping-pong highlight and accuracy stats build on this in later phases.
 
 `private TickRecipe fallback`
 
+#### gameTick
+
+`private int gameTick`
+
+#### gatheredThisCycle
+
+`private boolean gatheredThisCycle`
+
 #### guidance
 
 `private GuidanceState guidance`
@@ -1550,6 +1863,14 @@ beat. The ping-pong highlight and accuracy stats build on this in later phases.
 #### inventoryScanner
 
 `private InventoryScanner inventoryScanner`
+
+#### lastItemCount
+
+`private int lastItemCount`
+
+#### lastSkillXp
+
+`private int lastSkillXp`
 
 #### metronomeOverlay
 
@@ -1563,11 +1884,23 @@ beat. The ping-pong highlight and accuracy stats build on this in later phases.
 
 `private ResourceScanner resourceScanner`
 
+#### statsInfoBox
+
+`private TickStatsInfoBox statsInfoBox`
+
 #### targetHighlightOverlay
 
 `private TargetHighlightOverlay targetHighlightOverlay`
 
 ### Method Detail
+
+#### accuracy
+
+`AccuracyTracker accuracy()`
+
+Returns the accuracy tracker for the active recipe, or `null` when the plugin is stopped.
+
+- **Returns:** the accuracy tracker, or `null`
 
 #### activeRecipe
 
@@ -1621,6 +1954,14 @@ Runs detection for the tick, switches the active recipe when it changes, and adv
 
 - **Parameter** `event` — the game-tick event
 
+#### onItemContainerChanged
+
+`public void onItemContainerChanged(ItemContainerChanged event)`
+
+Scores a successful gather from an item-count increase (for methods that grant no XP).
+
+- **Parameter** `event` — the item-container-changed event
+
 #### onMenuOptionClicked
 
 `public void onMenuOptionClicked(MenuOptionClicked event)`
@@ -1628,6 +1969,14 @@ Runs detection for the tick, switches the active recipe when it changes, and adv
 Re-anchors the beat to the tick-item step when the player actually clicks the tick item.
 
 - **Parameter** `event` — the menu-click event
+
+#### onStatChanged
+
+`public void onStatChanged(StatChanged event)`
+
+Scores a successful gather from an XP gain in the recipe's skill.
+
+- **Parameter** `event` — the stat-changed event
 
 #### provideConfig
 
@@ -1641,6 +1990,10 @@ Supplies the plugin's configuration proxy to RuneLite's injector.
 #### rebuildFallback
 
 `private void rebuildFallback()`
+
+#### registerGather
+
+`private void registerGather()`
 
 #### selectRecipe
 
@@ -1658,9 +2011,9 @@ Stops the plugin: removes the overlay and drops all live state.
 
 Starts the plugin: seeds the catalog, builds the fallback clock, and registers the overlay.
 
-#### tickItemStepIndex
+#### stepIndexOf
 
-`private int tickItemStepIndex(TickRecipe recipe)`
+`private int stepIndexOf(TickRecipe recipe, StepKind kind)`
 
 ---
 
@@ -1800,6 +2153,59 @@ current step is that kind and is just starting, or -1 when no step of that kind 
 
 - **Parameter** `kind` — the step kind to look ahead for
 - **Returns:** ticks until that kind's next start, 0 if it starts now, or -1 if absent
+
+---
+
+## com.oveduumnakal.tickassist.TickItemMonitor
+
+_class_
+
+`public class TickItemMonitor`
+
+Warns when a consumable tick item is running low, so the player can restock before the cadence
+stalls. Reusable items (pestle, knife) are never flagged.
+
+### Field Summary
+
+| Modifier and Type | Field | Description |
+|---|---|---|
+| `private final InventoryScanner` | `inventoryScanner` |  |
+
+### Constructor Summary
+
+| Constructor | Description |
+|---|---|
+| `TickItemMonitor(InventoryScanner inventoryScanner)` |  |
+
+### Method Summary
+
+| Modifier and Type | Method | Description |
+|---|---|---|
+| `public boolean` | `lowOnTickItems(TickRecipe recipe, int threshold)` | Whether any consumable tick item for the recipe is carried but below the threshold. |
+
+### Field Detail
+
+#### inventoryScanner
+
+`private final InventoryScanner inventoryScanner`
+
+### Constructor Detail
+
+#### TickItemMonitor
+
+`TickItemMonitor(InventoryScanner inventoryScanner)`
+
+### Method Detail
+
+#### lowOnTickItems
+
+`public boolean lowOnTickItems(TickRecipe recipe, int threshold)`
+
+Whether any consumable tick item for the recipe is carried but below the threshold.
+
+- **Parameter** `recipe` — the active recipe
+- **Parameter** `threshold` — the low-stock threshold
+- **Returns:** true when a consumable tick item is running low
 
 ---
 
@@ -2103,6 +2509,84 @@ Returns the ordered, unmodifiable list of cycle steps.
 Returns the item ids whose presence marks this setup.
 
 - **Returns:** the tick-item ids
+
+---
+
+## com.oveduumnakal.tickassist.TickStatsInfoBox
+
+_class_
+
+`public class TickStatsInfoBox`
+
+A small on-screen panel of live timing stats — success %, streak, actions/hour, and XP/hour —
+plus a low-stock warning for consumable tick items. Shown only while a recipe is detected and the
+stats setting is on.
+
+### Field Summary
+
+| Modifier and Type | Field | Description |
+|---|---|---|
+| `private static final Color` | `WARNING` |  |
+| `private final TickAssistConfig` | `config` |  |
+| `private final PanelComponent` | `panel` |  |
+| `private final TickAssistPlugin` | `plugin` |  |
+| `private final TickItemMonitor` | `tickItemMonitor` |  |
+
+### Constructor Summary
+
+| Constructor | Description |
+|---|---|
+| `TickStatsInfoBox(TickAssistPlugin plugin, TickAssistConfig config, TickItemMonitor tickItemMonitor)` |  |
+
+### Method Summary
+
+| Modifier and Type | Method | Description |
+|---|---|---|
+| `private void` | `addLine(String left, String right)` |  |
+| `public Dimension` | `render(Graphics2D graphics)` | Renders the stats panel when a recipe is detected and stats are enabled. |
+
+### Field Detail
+
+#### WARNING
+
+`private static final Color WARNING`
+
+#### config
+
+`private final TickAssistConfig config`
+
+#### panel
+
+`private final PanelComponent panel`
+
+#### plugin
+
+`private final TickAssistPlugin plugin`
+
+#### tickItemMonitor
+
+`private final TickItemMonitor tickItemMonitor`
+
+### Constructor Detail
+
+#### TickStatsInfoBox
+
+`TickStatsInfoBox(TickAssistPlugin plugin, TickAssistConfig config, TickItemMonitor tickItemMonitor)`
+
+### Method Detail
+
+#### addLine
+
+`private void addLine(String left, String right)`
+
+#### render
+
+`public Dimension render(Graphics2D graphics)`
+
+Renders the stats panel when a recipe is detected and stats are enabled.
+
+- **Parameter** `graphics` — the overlay graphics context
+- **Returns:** the rendered size, or `null` when nothing is drawn
 
 ---
 

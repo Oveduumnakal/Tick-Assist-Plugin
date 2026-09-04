@@ -82,6 +82,10 @@ public final class TickAssistIds
 	/** Marshy-vine object ids for snake weed — capture in-game (Step-0). */
 	public static final Set<Integer> SNAKE_WEED_VINES = Collections.emptySet();
 
+	/** Tick items that deplete with use, so a low-stock warning applies (not pestle/knife). */
+	public static final Set<Integer> CONSUMABLE_TICK_ITEMS =
+			Set.of(ItemID.SWAMP_TAR, ItemID.GUAM_LEAF, ItemID.VIAL_WATER);
+
 	private TickAssistIds()
 	{
 	}

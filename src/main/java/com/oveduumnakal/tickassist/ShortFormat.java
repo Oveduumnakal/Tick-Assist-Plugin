@@ -24,60 +24,42 @@
  */
 package com.oveduumnakal.tickassist;
 
-import java.util.Collections;
-import java.util.HashSet;
-import java.util.Set;
-import javax.inject.Inject;
-
-import net.runelite.api.Client;
-import net.runelite.api.Item;
-import net.runelite.api.ItemContainer;
-import net.runelite.api.gameval.InventoryID;
+import java.util.Locale;
 
 /**
- * Reads the set of item ids currently in the player's inventory, used by {@link RecipeMatcher} to
- * spot a tick-manipulation setup.
+ * Compact number formatting for the stats readout: {@code 950}, {@code 1.2k}, {@code 62k},
+ * {@code 1.1m}. A stateless utility that cannot be instantiated.
  */
-public class InventoryScanner
+public final class ShortFormat
 {
-	private final Client client;
-
-	@Inject
-	InventoryScanner(Client client)
+	private ShortFormat()
 	{
-		this.client = client;
 	}
 
 	/**
-	 * Returns the distinct item ids held in the inventory.
+	 * Formats a rate or count compactly with a lowercase k/m suffix.
 	 *
-	 * @return the held item ids, or an empty set when the inventory is unavailable
+	 * @param value the value to format
+	 * @return the compact string
 	 */
-	public Set<Integer> heldItemIds()
+	public static String compact(double value)
 	{
-		ItemContainer inventory = client.getItemContainer(InventoryID.INV);
-		if (inventory == null)
-			return Collections.emptySet();
+		double abs = Math.abs(value);
+		if (abs >= 1_000_000)
+			return trim(value / 1_000_000.0) + "m";
 
-		Set<Integer> ids = new HashSet<>();
-		for (Item item : inventory.getItems())
-		{
-			if (item != null && item.getId() > 0)
-				ids.add(item.getId());
-		}
+		if (abs >= 1_000)
+			return trim(value / 1_000.0) + "k";
 
-		return ids;
+		return Long.toString(Math.round(value));
 	}
 
-	/**
-	 * Returns the total quantity of an item held in the inventory.
-	 *
-	 * @param itemId the item id
-	 * @return the total count, or 0 when the inventory is unavailable
-	 */
-	public int count(int itemId)
+	private static String trim(double value)
 	{
-		ItemContainer inventory = client.getItemContainer(InventoryID.INV);
-		return inventory == null ? 0 : inventory.count(itemId);
+		String s = String.format(Locale.US, "%.1f", value);
+		if (s.endsWith(".0"))
+			return s.substring(0, s.length() - 2);
+
+		return s;
 	}
 }

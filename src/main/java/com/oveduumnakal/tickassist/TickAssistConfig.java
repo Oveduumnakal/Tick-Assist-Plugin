@@ -120,4 +120,50 @@ public interface TickAssistConfig extends Config
 	{
 		return 3;
 	}
+
+	/**
+	 * Whether to show the live accuracy infobox (success %, streak, actions/hour, XP/hour).
+	 *
+	 * @return true when the stats infobox is shown
+	 */
+	@ConfigItem(
+		keyName = "showAccuracy",
+		name = "Show stats",
+		description = "Show the live success %, streak, and actions/hour while skilling."
+	)
+	default boolean showAccuracy()
+	{
+		return true;
+	}
+
+	/**
+	 * Whether to warn when a consumable tick item is running low.
+	 *
+	 * @return true when the low-stock warning is on
+	 */
+	@ConfigItem(
+		keyName = "warnLowTickItems",
+		name = "Warn on low tick items",
+		description = "Warn when a consumable tick item (swamp tar, herb, vial) is running low."
+	)
+	default boolean warnLowTickItems()
+	{
+		return true;
+	}
+
+	/**
+	 * The count below which a consumable tick item is considered low.
+	 *
+	 * @return the low-stock threshold
+	 */
+	@Range(min = 1, max = 1000)
+	@ConfigItem(
+		keyName = "lowTickItemThreshold",
+		name = "Low tick-item threshold",
+		description = "Warn when a consumable tick item drops below this count."
+	)
+	default int lowTickItemThreshold()
+	{
+		return 25;
+	}
 }

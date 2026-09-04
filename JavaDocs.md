@@ -12,7 +12,9 @@
 - [com.oveduumnakal.tickassist.DetectionState](#comoveduumnakaltickassistdetectionstate)
 - [com.oveduumnakal.tickassist.GatherSignal](#comoveduumnakaltickassistgathersignal)
 - [com.oveduumnakal.tickassist.GatherSignal.Kind](#comoveduumnakaltickassistgathersignalkind)
+- [com.oveduumnakal.tickassist.GuidanceState](#comoveduumnakaltickassistguidancestate)
 - [com.oveduumnakal.tickassist.HighlightFocus](#comoveduumnakaltickassisthighlightfocus)
+- [com.oveduumnakal.tickassist.InventoryHighlightOverlay](#comoveduumnakaltickassistinventoryhighlightoverlay)
 - [com.oveduumnakal.tickassist.InventoryScanner](#comoveduumnakaltickassistinventoryscanner)
 - [com.oveduumnakal.tickassist.MetronomeStyle](#comoveduumnakaltickassistmetronomestyle)
 - [com.oveduumnakal.tickassist.RecipeCatalog](#comoveduumnakaltickassistrecipecatalog)
@@ -20,6 +22,8 @@
 - [com.oveduumnakal.tickassist.RecipeMatcher](#comoveduumnakaltickassistrecipematcher)
 - [com.oveduumnakal.tickassist.ResourceScanner](#comoveduumnakaltickassistresourcescanner)
 - [com.oveduumnakal.tickassist.StepKind](#comoveduumnakaltickassiststepkind)
+- [com.oveduumnakal.tickassist.TargetHighlightOverlay](#comoveduumnakaltickassisttargethighlightoverlay)
+- [com.oveduumnakal.tickassist.TargetLocator](#comoveduumnakaltickassisttargetlocator)
 - [com.oveduumnakal.tickassist.TickAssistConfig](#comoveduumnakaltickassisttickassistconfig)
 - [com.oveduumnakal.tickassist.TickAssistIds](#comoveduumnakaltickassisttickassistids)
 - [com.oveduumnakal.tickassist.TickAssistPlugin](#comoveduumnakaltickassisttickassistplugin)
@@ -461,6 +465,113 @@ An increase in a skill's XP.
 
 ---
 
+## com.oveduumnakal.tickassist.GuidanceState
+
+_class_
+
+`public final class GuidanceState`
+
+Pure ping-pong machine that turns the clock's current step and the detection state into what the
+overlays draw: which target to highlight, the countdown, the pre-skill "armed" hint, and whether
+the cadence has broken.
+
+### Field Summary
+
+| Modifier and Type | Field | Description |
+|---|---|---|
+| `private boolean` | `armed` |  |
+| `private boolean` | `broken` |  |
+| `private int` | `countdown` |  |
+| `private HighlightFocus` | `focus` |  |
+
+### Method Summary
+
+| Modifier and Type | Method | Description |
+|---|---|---|
+| `public boolean` | `armed()` | Whether a setup is present but the player is not skilling yet. |
+| `public boolean` | `broken()` | Whether the cadence has broken (window elapsed without a gather). |
+| `public int` | `countdown()` | Returns the ticks until the next action, or -1 when idle. |
+| `public HighlightFocus` | `focus()` | Returns where to point the highlight this tick. |
+| `public void` | `onCountdownExpired()` | Marks that the action window elapsed with no gather — the cadence broke. |
+| `public void` | `onGather()` | Marks that a gather landed, clearing any broken state. |
+| `public void` | `update(DetectionState detection, TickStep step, int ticksUntilAction)` | Recomputes the highlight for this tick. |
+
+### Field Detail
+
+#### armed
+
+`private boolean armed`
+
+#### broken
+
+`private boolean broken`
+
+#### countdown
+
+`private int countdown`
+
+#### focus
+
+`private HighlightFocus focus`
+
+### Method Detail
+
+#### armed
+
+`public boolean armed()`
+
+Whether a setup is present but the player is not skilling yet.
+
+- **Returns:** true when armed
+
+#### broken
+
+`public boolean broken()`
+
+Whether the cadence has broken (window elapsed without a gather).
+
+- **Returns:** true when broken
+
+#### countdown
+
+`public int countdown()`
+
+Returns the ticks until the next action, or -1 when idle.
+
+- **Returns:** the countdown in ticks
+
+#### focus
+
+`public HighlightFocus focus()`
+
+Returns where to point the highlight this tick.
+
+- **Returns:** the highlight focus
+
+#### onCountdownExpired
+
+`public void onCountdownExpired()`
+
+Marks that the action window elapsed with no gather — the cadence broke.
+
+#### onGather
+
+`public void onGather()`
+
+Marks that a gather landed, clearing any broken state.
+
+#### update
+
+`public void update(DetectionState detection, TickStep step, int ticksUntilAction)`
+
+Recomputes the highlight for this tick.
+
+- **Parameter** `detection` — the current detection state
+- **Parameter** `step` — the clock's current step
+- **Parameter** `ticksUntilAction` — ticks until the next action is due (the ground countdown)
+
+---
+
 ## com.oveduumnakal.tickassist.HighlightFocus
 
 _enum_
@@ -496,6 +607,69 @@ Highlight the tick item(s) in the inventory.
 `NONE`
 
 Highlight nothing this step.
+
+---
+
+## com.oveduumnakal.tickassist.InventoryHighlightOverlay
+
+_class_
+
+`public class InventoryHighlightOverlay`
+
+Highlights the tick item(s) in the inventory while the guidance points there (`INVENTORY`
+focus). Draws only an outline — it never clicks or moves anything.
+
+### Field Summary
+
+| Modifier and Type | Field | Description |
+|---|---|---|
+| `private static final Color` | `INVENTORY_GLOW` |  |
+| `private final TickAssistConfig` | `config` |  |
+| `private final TickAssistPlugin` | `plugin` |  |
+
+### Constructor Summary
+
+| Constructor | Description |
+|---|---|
+| `InventoryHighlightOverlay(TickAssistPlugin plugin, TickAssistConfig config)` |  |
+
+### Method Summary
+
+| Modifier and Type | Method | Description |
+|---|---|---|
+| `public void` | `renderItemOverlay(Graphics2D graphics, int itemId, WidgetItem widgetItem)` | Outlines an inventory item when it is the tick item currently due. |
+
+### Field Detail
+
+#### INVENTORY_GLOW
+
+`private static final Color INVENTORY_GLOW`
+
+#### config
+
+`private final TickAssistConfig config`
+
+#### plugin
+
+`private final TickAssistPlugin plugin`
+
+### Constructor Detail
+
+#### InventoryHighlightOverlay
+
+`InventoryHighlightOverlay(TickAssistPlugin plugin, TickAssistConfig config)`
+
+### Method Detail
+
+#### renderItemOverlay
+
+`public void renderItemOverlay(Graphics2D graphics, int itemId, WidgetItem widgetItem)`
+
+Outlines an inventory item when it is the tick item currently due.
+
+- **Parameter** `graphics` — the overlay graphics context
+- **Parameter** `itemId` — the id of the item in this slot
+- **Parameter** `widgetItem` — the inventory slot widget
 
 ---
 
@@ -939,6 +1113,147 @@ Do nothing this tick; the cycle simply waits.
 
 ---
 
+## com.oveduumnakal.tickassist.TargetHighlightOverlay
+
+_class_
+
+`public class TargetHighlightOverlay`
+
+Highlights the nearest ground resource while the guidance points there, labelling it with the
+countdown (per the chosen `CountdownStyle`), a pre-skill "Ready" hint when armed, or a
+"Restart" cue when the cadence breaks.
+
+<p>Anchors to resource NPCs (fishing spots); object resources join once their ids are captured
+in-game (Step-0), so until then this draws only for NPC-based recipes.
+
+### Field Summary
+
+| Modifier and Type | Field | Description |
+|---|---|---|
+| `private static final Color` | `ARMED_COLOR` |  |
+| `private static final Color` | `BREAK_COLOR` |  |
+| `private static final Color` | `GROUND_COLOR` |  |
+| `private final Client` | `client` |  |
+| `private final TickAssistConfig` | `config` |  |
+| `private final TickAssistPlugin` | `plugin` |  |
+
+### Constructor Summary
+
+| Constructor | Description |
+|---|---|
+| `TargetHighlightOverlay(TickAssistPlugin plugin, TickAssistConfig config, Client client)` |  |
+
+### Method Summary
+
+| Modifier and Type | Method | Description |
+|---|---|---|
+| `private String` | `label(GuidanceState guidance, boolean armed)` |  |
+| `public Dimension` | `render(Graphics2D graphics)` | Outlines and labels the nearest resource when the guidance points at the ground. |
+
+### Field Detail
+
+#### ARMED_COLOR
+
+`private static final Color ARMED_COLOR`
+
+#### BREAK_COLOR
+
+`private static final Color BREAK_COLOR`
+
+#### GROUND_COLOR
+
+`private static final Color GROUND_COLOR`
+
+#### client
+
+`private final Client client`
+
+#### config
+
+`private final TickAssistConfig config`
+
+#### plugin
+
+`private final TickAssistPlugin plugin`
+
+### Constructor Detail
+
+#### TargetHighlightOverlay
+
+`TargetHighlightOverlay(TickAssistPlugin plugin, TickAssistConfig config, Client client)`
+
+### Method Detail
+
+#### label
+
+`private String label(GuidanceState guidance, boolean armed)`
+
+#### render
+
+`public Dimension render(Graphics2D graphics)`
+
+Outlines and labels the nearest resource when the guidance points at the ground.
+
+- **Parameter** `graphics` — the overlay graphics context
+- **Returns:** always `null` (this overlay draws in the scene)
+
+---
+
+## com.oveduumnakal.tickassist.TargetLocator
+
+_class_
+
+`public final class TargetLocator`
+
+Finds the resource the player should aim at. The nearest-of-candidates arithmetic is a pure,
+tested helper; the client wrapper applies it to the live NPC list.
+
+<p>Object-based resources (rocks, vines) join this once their object ids are captured in-game
+(Step-0); for now only resource NPCs (fishing spots) are located.
+
+### Constructor Summary
+
+| Constructor | Description |
+|---|---|
+| `TargetLocator()` |  |
+
+### Method Summary
+
+| Modifier and Type | Method | Description |
+|---|---|---|
+| `public static OptionalInt` | `nearestIndex(List<Integer> distances)` | Returns the index of the smallest distance, or empty when the list is empty. |
+| `public static Optional<NPC>` | `nearestResource(Client client, Set<Integer> resourceIds)` | Returns the nearest live NPC whose id is a resource for the active recipe. |
+
+### Constructor Detail
+
+#### TargetLocator
+
+`private TargetLocator()`
+
+### Method Detail
+
+#### nearestIndex
+
+`public static OptionalInt nearestIndex(List<Integer> distances)`
+
+Returns the index of the smallest distance, or empty when the list is empty. Ties keep the
+earliest index.
+
+- **Parameter** `distances` — the candidate distances
+- **Returns:** the index of the nearest, or empty
+
+#### nearestResource
+
+`public static Optional<NPC> nearestResource(Client client, Set<Integer> resourceIds)`
+
+Returns the nearest live NPC whose id is a resource for the active recipe.
+
+- **Parameter** `client` — the game client
+- **Parameter** `resourceIds` — the recipe's resource NPC ids
+- **Returns:** the nearest matching NPC, or empty
+
+---
+
 ## com.oveduumnakal.tickassist.TickAssistConfig
 
 _interface_
@@ -962,6 +1277,7 @@ accuracy stats, audio cue, tick-item warnings) arrives in later phases.
 | Modifier and Type | Method | Description |
 |---|---|---|
 | `default boolean` | `autoDetect()` | Whether the plugin auto-detects tick-manipulation setups from nearby resources and the items the player is carrying. |
+| `default CountdownStyle` | `countdownStyle()` | How the countdown to the next action is drawn on the ground target. |
 | `default int` | `customCadence()` | The cadence, in ticks, of the manual beat used until context detection selects a technique. |
 | `default MetronomeStyle` | `metronomeStyle()` | How the beat is displayed. |
 | `default int` | `scanRadius()` | How far, in tiles, to look for a manipulable resource when detecting a setup. |
@@ -985,6 +1301,14 @@ items the player is carrying.
 
 - **Returns:** true when context detection is enabled
 
+#### countdownStyle
+
+`default CountdownStyle countdownStyle()`
+
+How the countdown to the next action is drawn on the ground target.
+
+- **Returns:** the chosen countdown style
+
 #### customCadence
 
 `default int customCadence()`
@@ -997,8 +1321,8 @@ The cadence, in ticks, of the manual beat used until context detection selects a
 
 `default MetronomeStyle metronomeStyle()`
 
-How the beat is displayed. Phase 2 renders `MetronomeStyle#PIPS`; the default becomes
-`MetronomeStyle#TARGET_FOLLOW` once that highlight lands.
+How the beat is displayed. `MetronomeStyle#TARGET_FOLLOW` is the ping-pong highlight;
+the other styles draw an on-screen beat instead.
 
 - **Returns:** the chosen metronome style
 
@@ -1150,25 +1474,32 @@ beat. The ping-pong highlight and accuracy stats build on this in later phases.
 | `private TickAssistConfig` | `config` |  |
 | `private RecipeMatch` | `currentMatch` |  |
 | `private TickRecipe` | `fallback` |  |
+| `private GuidanceState` | `guidance` |  |
+| `private InventoryHighlightOverlay` | `inventoryHighlightOverlay` |  |
 | `private InventoryScanner` | `inventoryScanner` |  |
 | `private TickMetronomeOverlay` | `metronomeOverlay` |  |
 | `private OverlayManager` | `overlayManager` |  |
 | `private ResourceScanner` | `resourceScanner` |  |
+| `private TargetHighlightOverlay` | `targetHighlightOverlay` |  |
 
 ### Method Summary
 
 | Modifier and Type | Method | Description |
 |---|---|---|
+| `TickRecipe` | `activeRecipe()` | Returns the recipe currently driving the beat, or `null` when the plugin is stopped. |
 | `TickClock` | `clock()` | Returns the clock currently driving the beat, or `null` when the plugin is stopped. |
 | `private int` | `currentAnimationId()` |  |
 | `RecipeMatch` | `currentMatch()` | Returns the current detection result, or `null` when nothing is detected. |
+| `GuidanceState` | `guidance()` | Returns the current guidance state, or `null` when the plugin is stopped. |
 | `public void` | `onConfigChanged(ConfigChanged event)` | Rebuilds the fallback metronome when the manual cadence changes. |
 | `public void` | `onGameTick(GameTick event)` | Runs detection for the tick, switches the active recipe when it changes, and advances the beat. |
+| `public void` | `onMenuOptionClicked(MenuOptionClicked event)` | Re-anchors the beat to the tick-item step when the player actually clicks the tick item. |
 | `TickAssistConfig` | `provideConfig(ConfigManager configManager)` | Supplies the plugin's configuration proxy to RuneLite's injector. |
 | `private void` | `rebuildFallback()` |  |
 | `private TickRecipe` | `selectRecipe(int animationId)` |  |
 | `protected void` | `shutDown()` | Stops the plugin: removes the overlay and drops all live state. |
 | `protected void` | `startUp()` | Starts the plugin: seeds the catalog, builds the fallback clock, and registers the overlay. |
+| `private int` | `tickItemStepIndex(TickRecipe recipe)` |  |
 
 ### Field Detail
 
@@ -1208,6 +1539,14 @@ beat. The ping-pong highlight and accuracy stats build on this in later phases.
 
 `private TickRecipe fallback`
 
+#### guidance
+
+`private GuidanceState guidance`
+
+#### inventoryHighlightOverlay
+
+`private InventoryHighlightOverlay inventoryHighlightOverlay`
+
 #### inventoryScanner
 
 `private InventoryScanner inventoryScanner`
@@ -1224,7 +1563,19 @@ beat. The ping-pong highlight and accuracy stats build on this in later phases.
 
 `private ResourceScanner resourceScanner`
 
+#### targetHighlightOverlay
+
+`private TargetHighlightOverlay targetHighlightOverlay`
+
 ### Method Detail
+
+#### activeRecipe
+
+`TickRecipe activeRecipe()`
+
+Returns the recipe currently driving the beat, or `null` when the plugin is stopped.
+
+- **Returns:** the active recipe, or `null`
 
 #### clock
 
@@ -1246,6 +1597,14 @@ Returns the current detection result, or `null` when nothing is detected.
 
 - **Returns:** the current match, or `null`
 
+#### guidance
+
+`GuidanceState guidance()`
+
+Returns the current guidance state, or `null` when the plugin is stopped.
+
+- **Returns:** the guidance state, or `null`
+
 #### onConfigChanged
 
 `public void onConfigChanged(ConfigChanged event)`
@@ -1261,6 +1620,14 @@ Rebuilds the fallback metronome when the manual cadence changes.
 Runs detection for the tick, switches the active recipe when it changes, and advances the beat.
 
 - **Parameter** `event` — the game-tick event
+
+#### onMenuOptionClicked
+
+`public void onMenuOptionClicked(MenuOptionClicked event)`
+
+Re-anchors the beat to the tick-item step when the player actually clicks the tick item.
+
+- **Parameter** `event` — the menu-click event
 
 #### provideConfig
 
@@ -1290,6 +1657,10 @@ Stops the plugin: removes the overlay and drops all live state.
 `protected void startUp()`
 
 Starts the plugin: seeds the catalog, builds the fallback clock, and registers the overlay.
+
+#### tickItemStepIndex
+
+`private int tickItemStepIndex(TickRecipe recipe)`
 
 ---
 

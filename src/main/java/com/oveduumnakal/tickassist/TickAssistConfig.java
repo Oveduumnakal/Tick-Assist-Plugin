@@ -75,19 +75,34 @@ public interface TickAssistConfig extends Config
 	}
 
 	/**
-	 * How the beat is displayed. Phase 2 renders {@link MetronomeStyle#PIPS}; the default becomes
-	 * {@link MetronomeStyle#TARGET_FOLLOW} once that highlight lands.
+	 * How the beat is displayed. {@link MetronomeStyle#TARGET_FOLLOW} is the ping-pong highlight;
+	 * the other styles draw an on-screen beat instead.
 	 *
 	 * @return the chosen metronome style
 	 */
 	@ConfigItem(
 		keyName = "metronomeStyle",
 		name = "Beat display",
-		description = "How the tick beat is shown on screen."
+		description = "How the tick beat is shown: follow the target (highlight) or an on-screen beat."
 	)
 	default MetronomeStyle metronomeStyle()
 	{
-		return MetronomeStyle.PIPS;
+		return MetronomeStyle.TARGET_FOLLOW;
+	}
+
+	/**
+	 * How the countdown to the next action is drawn on the ground target.
+	 *
+	 * @return the chosen countdown style
+	 */
+	@ConfigItem(
+		keyName = "countdownStyle",
+		name = "Countdown",
+		description = "How the countdown to the next action is shown on the target."
+	)
+	default CountdownStyle countdownStyle()
+	{
+		return CountdownStyle.RING_NUMBER;
 	}
 
 	/**

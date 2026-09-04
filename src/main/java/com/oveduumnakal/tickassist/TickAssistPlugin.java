@@ -35,6 +35,7 @@ import lombok.extern.slf4j.Slf4j;
 import net.runelite.api.Client;
 import net.runelite.api.Player;
 import net.runelite.api.events.GameTick;
+import net.runelite.api.events.MenuOptionClicked;
 import net.runelite.client.config.ConfigManager;
 import net.runelite.client.eventbus.Subscribe;
 import net.runelite.client.events.ConfigChanged;
@@ -76,6 +77,12 @@ public class TickAssistPlugin extends Plugin
 	private TickMetronomeOverlay metronomeOverlay;
 
 	@Inject
+	private InventoryHighlightOverlay inventoryHighlightOverlay;
+
+	@Inject
+	private TargetHighlightOverlay targetHighlightOverlay;
+
+	@Inject
 	private ResourceScanner resourceScanner;
 
 	@Inject
@@ -83,6 +90,7 @@ public class TickAssistPlugin extends Plugin
 
 	private List<TickRecipe> catalog;
 	private ActivityDetector activityDetector;
+	private GuidanceState guidance;
 	private TickRecipe fallback;
 	private TickRecipe activeRecipe;
 	private TickClock clock;
@@ -108,11 +116,14 @@ public class TickAssistPlugin extends Plugin
 	{
 		catalog = RecipeCatalog.seedRecipes();
 		activityDetector = new ActivityDetector(STALL_TICKS);
+		guidance = new GuidanceState();
 		fallback = RecipeCatalog.customMetronome(config.customCadence());
 		activeRecipe = fallback;
 		clock = new TickClock(fallback.steps());
 		currentMatch = null;
 		overlayManager.add(metronomeOverlay);
+		overlayManager.add(inventoryHighlightOverlay);
+		overlayManager.add(targetHighlightOverlay);
 		log.debug("Tick Assist started");
 	}
 
@@ -123,6 +134,8 @@ public class TickAssistPlugin extends Plugin
 	protected void shutDown()
 	{
 		overlayManager.remove(metronomeOverlay);
+		overlayManager.remove(inventoryHighlightOverlay);
+		overlayManager.remove(targetHighlightOverlay);
 		clock = null;
 		activeRecipe = null;
 		currentMatch = null;
@@ -147,8 +160,33 @@ public class TickAssistPlugin extends Plugin
 			clock = new TickClock(selected.steps());
 		}
 
-		if (clock != null)
-			clock.tick();
+		clock.tick();
+
+		DetectionState detection = currentMatch != null ? currentMatch.state() : DetectionState.OFF;
+		int action = clock.ticksUntilNext(StepKind.TICK_ITEM);
+		if (action < 0)
+			action = clock.ticksUntilNext(StepKind.GATHER);
+
+		guidance.update(detection, clock.currentStep(), action);
+	}
+
+	/**
+	 * Re-anchors the beat to the tick-item step when the player actually clicks the tick item.
+	 *
+	 * @param event the menu-click event
+	 */
+	@Subscribe
+	public void onMenuOptionClicked(MenuOptionClicked event)
+	{
+		if (activeRecipe == null || clock == null)
+			return;
+
+		if (!activeRecipe.tickItemIds().contains(event.getItemId()))
+			return;
+
+		int index = tickItemStepIndex(activeRecipe);
+		if (index >= 0)
+			clock.resyncTo(index, 0);
 	}
 
 	/**
@@ -184,6 +222,38 @@ public class TickAssistPlugin extends Plugin
 	RecipeMatch currentMatch()
 	{
 		return currentMatch;
+	}
+
+	/**
+	 * Returns the current guidance state, or {@code null} when the plugin is stopped.
+	 *
+	 * @return the guidance state, or {@code null}
+	 */
+	GuidanceState guidance()
+	{
+		return guidance;
+	}
+
+	/**
+	 * Returns the recipe currently driving the beat, or {@code null} when the plugin is stopped.
+	 *
+	 * @return the active recipe, or {@code null}
+	 */
+	TickRecipe activeRecipe()
+	{
+		return activeRecipe;
+	}
+
+	private int tickItemStepIndex(TickRecipe recipe)
+	{
+		List<TickStep> steps = recipe.steps();
+		for (int i = 0; i < steps.size(); i++)
+		{
+			if (steps.get(i).kind() == StepKind.TICK_ITEM)
+				return i;
+		}
+
+		return -1;
 	}
 
 	private TickRecipe selectRecipe(int animationId)
